@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+# Documentation files with sensitive keys
+COMPLETE_SETUP_GUIDE.md
+QUICK_START.md
+scripts/setup-env.js

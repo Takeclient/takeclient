@@ -1,0 +1,2871 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Plan {
+  id                  String         @id @default(cuid())
+  name                String         @unique
+  displayName         String
+  description         String?
+  price               Float
+  yearlyPrice         Float?
+  stripePriceId       String?
+  stripeYearlyPriceId String?
+  features            Json
+  isActive            Boolean        @default(true)
+  sortOrder           Int            @default(0)
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  subscriptions       Subscription[]
+  tenants             Tenant[]
+}
+
+model Tenant {
+  id                   String                @id @default(cuid())
+  name                 String
+  slug                 String                @unique
+  subdomain            String?               @unique
+  customDomain         String?               @unique
+  stripeCustomerId     String?               @unique
+  trialEndsAt          DateTime?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  planId               String                @default("free")
+  activities           Activity[]
+  auditLogs            AuditLog[]
+  billingInvoices      BillingInvoice[]
+  businessSettings     BusinessSettings?
+  companies            Company[]
+  contacts             Contact[]
+  contactStages        ContactStage[]
+  deals                Deal[]
+  dealStages           DealStageCustom[]
+  domains              Domain[]
+  emailCampaigns       EmailCampaign[]
+  emailLists           EmailList[]
+  emailProviders       EmailProvider[]
+  emailSettings        EmailSettings?
+  emailTemplates       EmailTemplate[]
+  forms                Form[]
+  invoices             Invoice[]
+  landingPages         LandingPage[]
+  orders               Order[]
+  payments             Payment[]
+  pipelines            Pipeline[]
+  products             Product[]
+  productCategories    ProductCategory[]
+  proformaInvoices     ProformaInvoice[]
+  quotations           Quotation[]
+  subscriptions        Subscription[]
+  tasks                Task[]
+  plan                 Plan                  @relation(fields: [planId], references: [id])
+  users                User[]
+  whatsappIntegrations WhatsAppIntegration[]
+  workflows            Workflow[]
+  workflowTemplates    WorkflowTemplate[]
+  workflowVariables    WorkflowVariable[]
+  teams                Team[]
+  teamRoles            TeamRole[]
+  socialMediaConnections SocialMediaConnection[]
+  socialMediaPosts     SocialMediaPost[]
+  socialMediaSchedules SocialMediaSchedule[]
+  socialMediaTemplates SocialMediaTemplate[]
+  socialMediaConversations SocialMediaConversation[]
+  socialMediaAnalytics SocialMediaAnalytics[]
+  socialMediaSettings  SocialMediaSettings[]
+  googleMyBusinessAccounts GoogleMyBusinessAccount[]
+  googleMyBusinessSettings GoogleMyBusinessSettings[]
+
+  @@index([planId])
+}
+
+model Subscription {
+  id                   String             @id @default(cuid())
+  stripeSubscriptionId String?            @unique
+  status               SubscriptionStatus @default(ACTIVE)
+  interval             BillingInterval    @default(MONTHLY)
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean            @default(false)
+  canceledAt           DateTime?
+  trialStart           DateTime?
+  trialEnd             DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  tenantId             String
+  planId               String
+  plan                 Plan               @relation(fields: [planId], references: [id])
+  tenant               Tenant             @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([planId])
+}
+
+model BillingInvoice {
+  id              String               @id @default(cuid())
+  stripeInvoiceId String?              @unique
+  amount          Float
+  currency        String               @default("usd")
+  status          BillingInvoiceStatus @default(PENDING)
+  dueDate         DateTime?
+  paidAt          DateTime?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  tenantId        String
+  tenant          Tenant               @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+}
+
+model User {
+  id                  String            @id @default(cuid())
+  name                String?
+  email               String            @unique
+  password            String?
+  image               String?
+  emailVerified       DateTime?
+  role                Role              @default(USER)
+  isOwner             Boolean           @default(false)
+  isSuperAdmin        Boolean           @default(false)
+  isActive            Boolean           @default(true)
+  lastLoginAt         DateTime?
+  permissions         Json?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  tenantId            String?
+  createdBy           String?
+  accounts            Account[]
+  activities          Activity[]
+  auditLogs           AuditLog[]
+  ownedCompanies      Company[]         @relation("CompanyOwner")
+  ownedContacts       Contact[]         @relation("ContactOwner")
+  ownedDeals          Deal[]            @relation("DealOwner")
+  createdInvoices     Invoice[]         @relation("InvoiceCreator")
+  createdLandingPages LandingPage[]     @relation("LandingPageCreator")
+  pageVersions        PageVersion[]
+  createdPayments     Payment[]         @relation("PaymentCreator")
+  createdProformas    ProformaInvoice[] @relation("ProformaCreator")
+  createdQuotations   Quotation[]       @relation("QuotationCreator")
+  sessions            Session[]
+  createdTasks        Task[]            @relation("TaskCreator")
+  assignedTasks       Task[]            @relation("TaskAssignee")
+  tenant              Tenant?           @relation(fields: [tenantId], references: [id])
+  whatsappMessages    WhatsAppMessage[]
+  teamMemberships     TeamMember[]
+  ownedTeams          Team[]            @relation("TeamOwner")
+  socialMediaConnections SocialMediaConnection[] @relation("SocialMediaConnectionUser")
+  socialMediaPosts    SocialMediaPost[] @relation("SocialMediaPostCreator")
+  socialMediaSchedules SocialMediaSchedule[] @relation("SocialMediaScheduleCreator")
+  socialMediaTemplates SocialMediaTemplate[] @relation("SocialMediaTemplateCreator")
+  socialMediaMessages SocialMediaMessage[] @relation("SocialMediaMessageUser")
+  socialMediaSettings SocialMediaSettings[] @relation("SocialMediaSettingsUser")
+  googleMyBusinessAccounts GoogleMyBusinessAccount[] @relation("GMBAccountUser")
+  googleMyBusinessPosts GoogleMyBusinessPost[] @relation("GMBPostCreator")
+  googleMyBusinessSettings GoogleMyBusinessSettings[] @relation("GMBSettingsUser")
+
+  @@index([tenantId])
+  @@index([email])
+  @@index([role])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Contact {
+  id                    String                 @id @default(cuid())
+  firstName             String
+  lastName              String?
+  email                 String?
+  phone                 String?
+  status                ContactStatus          @default(LEAD)
+  source                String?
+  notes                 String?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  tenantId              String
+  companyId             String?
+  address               String?
+  assignedTo            String?
+  avatar                String?
+  city                  String?
+  country               String?
+  jobTitle              String?
+  lastActivity          DateTime?
+  leadScore             Int?                   @default(0)
+  socialProfiles        Json?
+  stageId               String?
+  state                 String?
+  tags                  String[]
+  website               String?
+  zipCode               String?
+  activities            Activity[]
+  owner                 User?                  @relation("ContactOwner", fields: [assignedTo], references: [id])
+  company               Company?               @relation(fields: [companyId], references: [id])
+  stage                 ContactStage?          @relation(fields: [stageId], references: [id])
+  tenant                Tenant                 @relation(fields: [tenantId], references: [id])
+  deals                 Deal[]
+  emailSubscribers      EmailSubscriber[]
+  invoices              Invoice[]
+  orders                Order[]
+  proformaInvoices      ProformaInvoice[]
+  quotations            Quotation[]
+  tasks                 Task[]
+  whatsappConversations WhatsAppConversation[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@index([companyId])
+  @@index([assignedTo])
+  @@index([stageId])
+  @@index([email])
+  @@index([lastActivity])
+}
+
+model ContactStage {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  color       String    @default("#3B82F6")
+  order       Int       @default(0)
+  isDefault   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  tenantId    String
+  pipelineId  String
+  contacts    Contact[]
+  pipeline    Pipeline  @relation(fields: [pipelineId], references: [id])
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, pipelineId, name])
+  @@index([tenantId])
+  @@index([pipelineId])
+}
+
+model Pipeline {
+  id            String            @id @default(cuid())
+  name          String
+  description   String?
+  type          PipelineType      @default(CONTACT)
+  isDefault     Boolean           @default(false)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  tenantId      String
+  contactStages ContactStage[]
+  dealStages    DealStageCustom[]
+  tenant        Tenant            @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+}
+
+model Company {
+  id               String            @id @default(cuid())
+  name             String
+  industry         String?
+  website          String?
+  address          String?
+  size             String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  tenantId         String
+  assignedTo       String?
+  city             String?
+  country          String?
+  description      String?
+  email            String?
+  lastActivity     DateTime?
+  logo             String?
+  phone            String?
+  revenue          Float?
+  socialProfiles   Json?
+  state            String?
+  tags             String[]
+  zipCode          String?
+  activities       Activity[]
+  owner            User?             @relation("CompanyOwner", fields: [assignedTo], references: [id])
+  tenant           Tenant            @relation(fields: [tenantId], references: [id])
+  contacts         Contact[]
+  deals            Deal[]
+  emailSubscribers EmailSubscriber[]
+  invoices         Invoice[]
+  proformaInvoices ProformaInvoice[]
+  quotations       Quotation[]
+  tasks            Task[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@index([assignedTo])
+  @@index([name])
+}
+
+model Deal {
+  id               String            @id @default(cuid())
+  name             String
+  value            Float
+  stage            DealStage         @default(PROSPECTING)
+  closeDate        DateTime?
+  probability      Int?              @default(0)
+  description      String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  tenantId         String
+  contactId        String?
+  companyId        String?
+  assignedTo       String?
+  lastActivity     DateTime?
+  products         Json?
+  source           String?
+  stageId          String?
+  tags             String[]
+  activities       Activity[]
+  owner            User?             @relation("DealOwner", fields: [assignedTo], references: [id])
+  company          Company?          @relation(fields: [companyId], references: [id])
+  contact          Contact?          @relation(fields: [contactId], references: [id])
+  customStage      DealStageCustom?  @relation(fields: [stageId], references: [id])
+  tenant           Tenant            @relation(fields: [tenantId], references: [id])
+  invoices         Invoice[]
+  proformaInvoices ProformaInvoice[]
+  quotations       Quotation[]
+  tasks            Task[]
+
+  @@index([tenantId])
+  @@index([contactId])
+  @@index([companyId])
+  @@index([assignedTo])
+  @@index([stageId])
+}
+
+model DealStageCustom {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  color       String   @default("#3B82F6")
+  order       Int      @default(0)
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  tenantId    String
+  pipelineId  String
+  deals       Deal[]
+  pipeline    Pipeline @relation(fields: [pipelineId], references: [id])
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, pipelineId, name])
+  @@index([tenantId])
+  @@index([pipelineId])
+}
+
+model Activity {
+  id          String       @id @default(cuid())
+  type        ActivityType
+  title       String
+  description String?
+  duration    Int?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  scheduledAt DateTime?
+  completedAt DateTime?
+  isCompleted Boolean      @default(false)
+  tenantId    String
+  userId      String
+  contactId   String?
+  companyId   String?
+  dealId      String?
+  company     Company?     @relation(fields: [companyId], references: [id])
+  contact     Contact?     @relation(fields: [contactId], references: [id])
+  deal        Deal?        @relation(fields: [dealId], references: [id])
+  tenant      Tenant       @relation(fields: [tenantId], references: [id])
+  user        User         @relation(fields: [userId], references: [id])
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([contactId])
+  @@index([companyId])
+  @@index([dealId])
+  @@index([scheduledAt])
+}
+
+model Task {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  priority    Priority   @default(MEDIUM)
+  status      TaskStatus @default(PENDING)
+  dueDate     DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  completedAt DateTime?
+  tenantId    String
+  assignedTo  String
+  assignedBy  String
+  contactId   String?
+  companyId   String?
+  dealId      String?
+  creator     User       @relation("TaskCreator", fields: [assignedBy], references: [id])
+  assignee    User       @relation("TaskAssignee", fields: [assignedTo], references: [id])
+  company     Company?   @relation(fields: [companyId], references: [id])
+  contact     Contact?   @relation(fields: [contactId], references: [id])
+  deal        Deal?      @relation(fields: [dealId], references: [id])
+  tenant      Tenant     @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([assignedTo])
+  @@index([contactId])
+  @@index([companyId])
+  @@index([dealId])
+  @@index([dueDate])
+}
+
+model Form {
+  id             String           @id @default(cuid())
+  title          String
+  description    String?
+  fields         Json
+  styles         Json?
+  buttonStyle    Json?
+  submitText     String?
+  successMessage String?
+  redirectUrl    String?
+  isActive       Boolean          @default(true)
+  embedCode      String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  tenantId       String
+  createdBy      String?
+  tenant         Tenant           @relation(fields: [tenantId], references: [id])
+  submissions    FormSubmission[]
+
+  @@index([tenantId])
+}
+
+model FormSubmission {
+  id            String       @id @default(cuid())
+  data          Json
+  createdAt     DateTime     @default(now())
+  formId        String
+  landingPageId String?
+  form          Form         @relation(fields: [formId], references: [id])
+  landingPage   LandingPage? @relation(fields: [landingPageId], references: [id])
+
+  @@index([formId])
+  @@index([landingPageId])
+}
+
+model AuditLog {
+  id         String      @id @default(cuid())
+  action     AuditAction
+  resource   String
+  resourceId String?
+  oldValues  Json?
+  newValues  Json?
+  metadata   Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime    @default(now())
+  userId     String
+  tenantId   String?
+  tenant     Tenant?     @relation(fields: [tenantId], references: [id])
+  user       User        @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([tenantId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model SystemConfig {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       Json
+  description String?
+  isPublic    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   String?
+  updatedBy   String?
+}
+
+model FeatureFlag {
+  id                String   @id @default(cuid())
+  name              String   @unique
+  description       String?
+  isEnabled         Boolean  @default(false)
+  rolloutPercentage Int      @default(0)
+  targetTenants     Json?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  createdBy         String?
+  updatedBy         String?
+}
+
+model WhatsAppIntegration {
+  id                 String                 @id @default(cuid())
+  name               String
+  phoneNumber        String
+  phoneNumberId      String
+  businessAccountId  String
+  accessToken        String
+  webhookVerifyToken String
+  isActive           Boolean                @default(true)
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+  tenantId           String
+  conversations      WhatsAppConversation[]
+  tenant             Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  templates          WhatsAppTemplate[]
+
+  @@unique([tenantId, phoneNumber])
+  @@index([tenantId])
+}
+
+model WhatsAppConversation {
+  id            String                     @id @default(cuid())
+  customerPhone String
+  customerName  String?
+  status        WhatsAppConversationStatus @default(ACTIVE)
+  lastMessageAt DateTime?
+  unreadCount   Int                        @default(0)
+  createdAt     DateTime                   @default(now())
+  updatedAt     DateTime                   @updatedAt
+  integrationId String
+  contactId     String?
+  contact       Contact?                   @relation(fields: [contactId], references: [id])
+  integration   WhatsAppIntegration        @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  messages      WhatsAppMessage[]
+
+  @@unique([integrationId, customerPhone])
+  @@index([integrationId])
+  @@index([contactId])
+}
+
+model WhatsAppMessage {
+  id             String                @id @default(cuid())
+  waMessageId    String?
+  direction      MessageDirection
+  type           WhatsAppMessageType
+  status         WhatsAppMessageStatus @default(PENDING)
+  content        String?
+  mediaUrl       String?
+  templateName   String?
+  templateData   Json?
+  errorMessage   String?
+  sentAt         DateTime?
+  deliveredAt    DateTime?
+  readAt         DateTime?
+  createdAt      DateTime              @default(now())
+  conversationId String
+  userId         String?
+  conversation   WhatsAppConversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User?                 @relation(fields: [userId], references: [id])
+
+  @@index([conversationId])
+  @@index([waMessageId])
+}
+
+model WhatsAppTemplate {
+  id            String              @id @default(cuid())
+  name          String
+  category      String
+  language      String
+  status        String
+  components    Json
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  integrationId String
+  integration   WhatsAppIntegration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+
+  @@unique([integrationId, name, language])
+  @@index([integrationId])
+}
+
+model EmailProvider {
+  id               String            @id @default(cuid())
+  name             String
+  type             EmailProviderType
+  isActive         Boolean           @default(true)
+  isDefault        Boolean           @default(false)
+  settings         Json
+  smtpHost         String?
+  smtpPort         Int?
+  smtpSecure       Boolean           @default(true)
+  smtpUser         String?
+  smtpPass         String?
+  apiKey           String?
+  apiSecret        String?
+  webhookSecret    String?
+  defaultFromEmail String?
+  defaultFromName  String?
+  replyToEmail     String?
+  dailyLimit       Int?
+  hourlyLimit      Int?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  tenantId         String
+  campaigns        EmailCampaign[]
+  tenant           Tenant            @relation(fields: [tenantId], references: [id])
+  emailSends       EmailSend[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+}
+
+model EmailCampaign {
+  id               String              @id @default(cuid())
+  name             String
+  subject          String
+  previewText      String?
+  status           CampaignStatus      @default(DRAFT)
+  type             CampaignType        @default(REGULAR)
+  htmlContent      String
+  textContent      String?
+  designJson       Json?
+  scheduledAt      DateTime?
+  sentAt           DateTime?
+  openTracking     Boolean             @default(true)
+  clickTracking    Boolean             @default(true)
+  recipientCount   Int                 @default(0)
+  sentCount        Int                 @default(0)
+  openCount        Int                 @default(0)
+  clickCount       Int                 @default(0)
+  bounceCount      Int                 @default(0)
+  unsubscribeCount Int                 @default(0)
+  isAbTest         Boolean             @default(false)
+  abTestWinner     String?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  tenantId         String
+  providerId       String
+  templateId       String?
+  parentCampaignId String?
+  parentCampaign   EmailCampaign?      @relation("CampaignVariants", fields: [parentCampaignId], references: [id])
+  variants         EmailCampaign[]     @relation("CampaignVariants")
+  provider         EmailProvider       @relation(fields: [providerId], references: [id])
+  template         EmailTemplate?      @relation(fields: [templateId], references: [id])
+  tenant           Tenant              @relation(fields: [tenantId], references: [id])
+  lists            EmailListCampaign[]
+  emailSends       EmailSend[]
+
+  @@index([tenantId])
+  @@index([providerId])
+  @@index([templateId])
+  @@index([status])
+  @@index([scheduledAt])
+}
+
+model EmailTemplate {
+  id          String          @id @default(cuid())
+  name        String
+  description String?
+  category    String?
+  thumbnail   String?
+  htmlContent String
+  textContent String?
+  designJson  Json?
+  variables   Json?
+  isActive    Boolean         @default(true)
+  isGlobal    Boolean         @default(false)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  tenantId    String?
+  campaigns   EmailCampaign[]
+  tenant      Tenant?         @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@index([category])
+}
+
+model EmailList {
+  id                String              @id @default(cuid())
+  name              String
+  description       String?
+  subscriberCount   Int                 @default(0)
+  activeCount       Int                 @default(0)
+  unsubscribedCount Int                 @default(0)
+  doubleOptIn       Boolean             @default(false)
+  welcomeEmailId    String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  tenantId          String
+  tenant            Tenant              @relation(fields: [tenantId], references: [id])
+  campaigns         EmailListCampaign[]
+  subscribers       EmailSubscriber[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+}
+
+model EmailSubscriber {
+  id             String           @id @default(cuid())
+  email          String
+  firstName      String?
+  lastName       String?
+  status         SubscriberStatus @default(PENDING)
+  emailFrequency EmailFrequency   @default(ALL)
+  subscribedAt   DateTime         @default(now())
+  confirmedAt    DateTime?
+  unsubscribedAt DateTime?
+  lastOpenedAt   DateTime?
+  lastClickedAt  DateTime?
+  totalOpens     Int              @default(0)
+  totalClicks    Int              @default(0)
+  customFields   Json?
+  tags           String[]
+  source         String?
+  ipAddress      String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  listId         String
+  contactId      String?
+  companyId      String?
+  emailSends     EmailSend[]
+  Company        Company?         @relation(fields: [companyId], references: [id])
+  contact        Contact?         @relation(fields: [contactId], references: [id])
+  list           EmailList        @relation(fields: [listId], references: [id])
+
+  @@unique([listId, email])
+  @@index([listId])
+  @@index([email])
+  @@index([status])
+  @@index([contactId])
+}
+
+model EmailListCampaign {
+  id         String        @id @default(cuid())
+  campaignId String
+  listId     String
+  campaign   EmailCampaign @relation(fields: [campaignId], references: [id])
+  list       EmailList     @relation(fields: [listId], references: [id])
+
+  @@unique([campaignId, listId])
+  @@index([campaignId])
+  @@index([listId])
+}
+
+model EmailSend {
+  id                String          @id @default(cuid())
+  status            EmailStatus     @default(PENDING)
+  sentAt            DateTime?
+  deliveredAt       DateTime?
+  openedAt          DateTime?
+  clickedAt         DateTime?
+  bouncedAt         DateTime?
+  complainedAt      DateTime?
+  unsubscribedAt    DateTime?
+  errorMessage      String?
+  bounceType        String?
+  providerMessageId String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  campaignId        String
+  subscriberId      String
+  providerId        String
+  clicks            EmailClick[]
+  campaign          EmailCampaign   @relation(fields: [campaignId], references: [id])
+  provider          EmailProvider   @relation(fields: [providerId], references: [id])
+  subscriber        EmailSubscriber @relation(fields: [subscriberId], references: [id])
+
+  @@unique([campaignId, subscriberId])
+  @@index([campaignId])
+  @@index([subscriberId])
+  @@index([status])
+  @@index([sentAt])
+}
+
+model EmailClick {
+  id          String    @id @default(cuid())
+  url         String
+  clickedAt   DateTime  @default(now())
+  userAgent   String?
+  ipAddress   String?
+  emailSendId String
+  emailSend   EmailSend @relation(fields: [emailSendId], references: [id])
+
+  @@index([emailSendId])
+}
+
+model EmailSettings {
+  id              String   @id @default(cuid())
+  sendingDomain   String?
+  trackingDomain  String?
+  companyName     String?
+  companyAddress  String?
+  unsubscribeText String?
+  includeFooter   Boolean  @default(true)
+  footerHtml      String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  tenantId        String   @unique
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+}
+
+model Workflow {
+  id                String              @id @default(cuid())
+  name              String
+  description       String?
+  status            WorkflowStatus      @default(DRAFT)
+  triggerType       WorkflowTriggerType
+  triggerConfig     Json
+  conditions        Json?
+  isActive          Boolean             @default(true)
+  allowMultipleRuns Boolean             @default(true)
+  maxRuns           Int?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  tenantId          String
+  tenant            Tenant              @relation(fields: [tenantId], references: [id])
+  actions           WorkflowAction[]
+  executions        WorkflowExecution[]
+  schedule          WorkflowSchedule?
+  variables         WorkflowVariable[]
+
+  @@index([tenantId])
+  @@index([status])
+  @@index([triggerType])
+}
+
+model WorkflowAction {
+  id            String                 @id @default(cuid())
+  name          String
+  type          WorkflowActionType
+  config        Json
+  order         Int
+  delayMinutes  Int?
+  conditions    Json?
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+  workflowId    String
+  workflow      Workflow               @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  executionLogs WorkflowExecutionLog[]
+
+  @@index([workflowId])
+  @@index([order])
+}
+
+model WorkflowExecution {
+  id           String                 @id @default(cuid())
+  status       ExecutionStatus        @default(RUNNING)
+  entityType   String
+  entityId     String
+  triggerType  String
+  triggerData  Json?
+  startedAt    DateTime               @default(now())
+  completedAt  DateTime?
+  error        String?
+  errorDetails Json?
+  workflowId   String
+  workflow     Workflow               @relation(fields: [workflowId], references: [id])
+  logs         WorkflowExecutionLog[]
+
+  @@index([workflowId])
+  @@index([status])
+  @@index([entityType, entityId])
+  @@index([startedAt])
+}
+
+model WorkflowExecutionLog {
+  id           String            @id @default(cuid())
+  status       ExecutionStatus
+  actionName   String
+  actionType   String
+  actionConfig Json?
+  startedAt    DateTime          @default(now())
+  completedAt  DateTime?
+  result       Json?
+  error        String?
+  errorDetails Json?
+  executionId  String
+  actionId     String
+  action       WorkflowAction    @relation(fields: [actionId], references: [id])
+  execution    WorkflowExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+
+  @@index([executionId])
+  @@index([actionId])
+  @@index([status])
+}
+
+model WorkflowTemplate {
+  id            String              @id @default(cuid())
+  name          String
+  description   String?
+  category      String
+  triggerType   WorkflowTriggerType
+  triggerConfig Json
+  actions       Json
+  icon          String?
+  color         String?
+  tags          String[]
+  isPublic      Boolean             @default(false)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  tenantId      String?
+  tenant        Tenant?             @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([category])
+}
+
+model WorkflowSchedule {
+  id             String       @id @default(cuid())
+  scheduleType   ScheduleType
+  scheduleConfig Json
+  timezone       String       @default("UTC")
+  nextRunAt      DateTime?
+  lastRunAt      DateTime?
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  workflowId     String       @unique
+  workflow       Workflow     @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([nextRunAt])
+  @@index([isActive])
+}
+
+model WorkflowVariable {
+  id           String       @id @default(cuid())
+  key          String
+  name         String
+  description  String?
+  type         VariableType
+  defaultValue Json?
+  isGlobal     Boolean      @default(false)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  workflowId   String?
+  tenantId     String
+  tenant       Tenant       @relation(fields: [tenantId], references: [id])
+  workflow     Workflow?    @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, key])
+  @@index([tenantId])
+  @@index([workflowId])
+}
+
+model Quotation {
+  id              String           @id @default(cuid())
+  quotationNumber String
+  status          QuotationStatus  @default(DRAFT)
+  issueDate       DateTime         @default(now())
+  validUntil      DateTime
+  contactId       String?
+  companyId       String?
+  dealId          String?
+  billingName     String
+  billingEmail    String?
+  billingPhone    String?
+  billingAddress  String?
+  billingCity     String?
+  billingState    String?
+  billingZipCode  String?
+  billingCountry  String?
+  subtotal        Int              @default(0)
+  taxAmount       Int              @default(0)
+  discountAmount  Int              @default(0)
+  totalAmount     Int              @default(0)
+  discountType    DiscountType     @default(PERCENTAGE)
+  discountValue   Float            @default(0)
+  terms           String?
+  notes           String?
+  internalNotes   String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  sentAt          DateTime?
+  viewedAt        DateTime?
+  acceptedAt      DateTime?
+  rejectedAt      DateTime?
+  convertedAt     DateTime?
+  tenantId        String
+  createdById     String
+  invoice         Invoice?
+  proformaInvoice ProformaInvoice?
+  company         Company?         @relation(fields: [companyId], references: [id])
+  contact         Contact?         @relation(fields: [contactId], references: [id])
+  createdBy       User             @relation("QuotationCreator", fields: [createdById], references: [id])
+  deal            Deal?            @relation(fields: [dealId], references: [id])
+  tenant          Tenant           @relation(fields: [tenantId], references: [id])
+  items           QuotationItem[]
+
+  @@unique([tenantId, quotationNumber])
+  @@index([tenantId])
+  @@index([contactId])
+  @@index([companyId])
+  @@index([dealId])
+  @@index([status])
+}
+
+model QuotationItem {
+  id          String    @id @default(cuid())
+  quotationId String
+  name        String
+  description String?
+  quantity    Float     @default(1)
+  unitPrice   Int
+  taxRate     Float     @default(0)
+  taxAmount   Int       @default(0)
+  totalAmount Int       @default(0)
+  productId   String?
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  quotation   Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+
+  @@index([quotationId])
+}
+
+model ProformaInvoice {
+  id             String         @id @default(cuid())
+  invoiceNumber  String
+  status         ProformaStatus @default(DRAFT)
+  issueDate      DateTime       @default(now())
+  dueDate        DateTime?
+  quotationId    String?        @unique
+  contactId      String?
+  companyId      String?
+  dealId         String?
+  billingName    String
+  billingEmail   String?
+  billingPhone   String?
+  billingAddress String?
+  billingCity    String?
+  billingState   String?
+  billingZipCode String?
+  billingCountry String?
+  subtotal       Int            @default(0)
+  taxAmount      Int            @default(0)
+  discountAmount Int            @default(0)
+  totalAmount    Int            @default(0)
+  discountType   DiscountType   @default(PERCENTAGE)
+  discountValue  Float          @default(0)
+  terms          String?
+  notes          String?
+  internalNotes  String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  sentAt         DateTime?
+  convertedAt    DateTime?
+  tenantId       String
+  createdById    String
+  invoice        Invoice?
+  company        Company?       @relation(fields: [companyId], references: [id])
+  contact        Contact?       @relation(fields: [contactId], references: [id])
+  createdBy      User           @relation("ProformaCreator", fields: [createdById], references: [id])
+  deal           Deal?          @relation(fields: [dealId], references: [id])
+  quotation      Quotation?     @relation(fields: [quotationId], references: [id])
+  tenant         Tenant         @relation(fields: [tenantId], references: [id])
+  items          ProformaItem[]
+
+  @@unique([tenantId, invoiceNumber])
+  @@index([tenantId])
+  @@index([contactId])
+  @@index([companyId])
+  @@index([dealId])
+  @@index([status])
+}
+
+model ProformaItem {
+  id          String          @id @default(cuid())
+  proformaId  String
+  name        String
+  description String?
+  quantity    Float           @default(1)
+  unitPrice   Int
+  taxRate     Float           @default(0)
+  taxAmount   Int             @default(0)
+  totalAmount Int             @default(0)
+  productId   String?
+  sortOrder   Int             @default(0)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  proforma    ProformaInvoice @relation(fields: [proformaId], references: [id], onDelete: Cascade)
+
+  @@index([proformaId])
+}
+
+model Invoice {
+  id               String           @id @default(cuid())
+  status           InvoiceStatus    @default(DRAFT)
+  dueDate          DateTime
+  paidAt           DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  tenantId         String
+  billingAddress   String?
+  billingCity      String?
+  billingCountry   String?
+  billingEmail     String?
+  billingName      String
+  billingPhone     String?
+  billingState     String?
+  billingZipCode   String?
+  cancelledAt      DateTime?
+  companyId        String?
+  contactId        String?
+  createdById      String
+  dealId           String?
+  discountAmount   Int              @default(0)
+  discountType     DiscountType     @default(PERCENTAGE)
+  discountValue    Float            @default(0)
+  dueAmount        Int              @default(0)
+  internalNotes    String?
+  invoiceNumber    String
+  issueDate        DateTime         @default(now())
+  notes            String?
+  overdueNoticeAt  DateTime?
+  paidAmount       Int              @default(0)
+  paymentMethod    String?
+  paymentReference String?
+  proformaId       String?          @unique
+  quotationId      String?          @unique
+  sentAt           DateTime?
+  subtotal         Int              @default(0)
+  taxAmount        Int              @default(0)
+  terms            String?
+  totalAmount      Int              @default(0)
+  viewedAt         DateTime?
+  company          Company?         @relation(fields: [companyId], references: [id])
+  contact          Contact?         @relation(fields: [contactId], references: [id])
+  createdBy        User             @relation("InvoiceCreator", fields: [createdById], references: [id])
+  deal             Deal?            @relation(fields: [dealId], references: [id])
+  proforma         ProformaInvoice? @relation(fields: [proformaId], references: [id])
+  quotation        Quotation?       @relation(fields: [quotationId], references: [id])
+  tenant           Tenant           @relation(fields: [tenantId], references: [id])
+  items            InvoiceItem[]
+  payments         Payment[]
+
+  @@unique([tenantId, invoiceNumber])
+  @@index([tenantId])
+  @@index([contactId])
+  @@index([companyId])
+  @@index([dealId])
+  @@index([status])
+  @@index([dueDate])
+}
+
+model InvoiceItem {
+  id          String   @id @default(cuid())
+  invoiceId   String
+  name        String
+  description String?
+  quantity    Float    @default(1)
+  unitPrice   Int
+  taxRate     Float    @default(0)
+  taxAmount   Int      @default(0)
+  totalAmount Int      @default(0)
+  productId   String?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+}
+
+model Payment {
+  id               String         @id @default(cuid())
+  invoiceId        String?
+  amount           Float
+  paymentDate      DateTime       @default(now())
+  paymentMethod    String?
+  reference        String?
+  notes            String?
+  createdAt        DateTime       @default(now())
+  createdById      String?
+  currency         String         @default("USD")
+  failedAt         DateTime?
+  failureReason    String?
+  gatewayPaymentId String?
+  gatewayProvider  String?
+  gatewayReference String?
+  metadata         Json?
+  method           PaymentMethod?
+  netAmount        Float?
+  orderId          String?
+  processedAt      DateTime?
+  refundedAt       DateTime?
+  status           PaymentStatus  @default(PENDING)
+  tenantId         String
+  transactionFee   Float?
+  updatedAt        DateTime       @updatedAt
+  createdBy        User?          @relation("PaymentCreator", fields: [createdById], references: [id])
+  invoice          Invoice?       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  order            Order?         @relation(fields: [orderId], references: [id])
+  tenant           Tenant         @relation(fields: [tenantId], references: [id])
+
+  @@index([invoiceId])
+  @@index([orderId])
+  @@index([tenantId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model BusinessSettings {
+  id                     String   @id @default(cuid())
+  businessName           String
+  businessEmail          String?
+  businessPhone          String?
+  businessWebsite        String?
+  businessAddress        String?
+  businessCity           String?
+  businessState          String?
+  businessZipCode        String?
+  businessCountry        String?
+  taxId                  String?
+  vatNumber              String?
+  defaultTaxRate         Float    @default(0)
+  bankName               String?
+  bankAccountNumber      String?
+  bankRoutingNumber      String?
+  bankSwiftCode          String?
+  bankIban               String?
+  invoicePrefix          String   @default("INV-")
+  quotationPrefix        String   @default("QUO-")
+  proformaPrefix         String   @default("PRO-")
+  nextInvoiceNumber      Int      @default(1)
+  nextQuotationNumber    Int      @default(1)
+  nextProformaNumber     Int      @default(1)
+  logoUrl                String?
+  defaultPaymentTerms    String?
+  defaultQuotationTerms  String?
+  invoiceEmailTemplate   String?
+  quotationEmailTemplate String?
+  proformaEmailTemplate  String?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+  tenantId               String   @unique
+  tenant                 Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+}
+
+model LandingPage {
+  id              String               @id @default(cuid())
+  name            String
+  slug            String
+  description     String?
+  status          PageStatus           @default(DRAFT)
+  content         Json
+  css             String?
+  javascript      String?
+  metaTitle       String?
+  metaDescription String?
+  metaKeywords    String?
+  ogImage         String?
+  ogTitle         String?
+  ogDescription   String?
+  customDomain    String?              @unique
+  favicon         String?
+  analytics       Json?
+  publishedAt     DateTime?
+  publishedBy     String?
+  views           Int                  @default(0)
+  uniqueVisitors  Int                  @default(0)
+  conversionRate  Float                @default(0)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  tenantId        String
+  templateId      String?
+  createdById     String
+  submissions     FormSubmission[]
+  createdBy       User                 @relation("LandingPageCreator", fields: [createdById], references: [id])
+  template        LandingPageTemplate? @relation(fields: [templateId], references: [id])
+  tenant          Tenant               @relation(fields: [tenantId], references: [id])
+  pageAnalytics   PageAnalytics[]
+  versions        PageVersion[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+  @@index([status])
+  @@index([customDomain])
+}
+
+model LandingPageTemplate {
+  id          String        @id @default(cuid())
+  name        String
+  description String?
+  category    String
+  thumbnail   String?
+  content     Json
+  components  Json
+  tags        String[]
+  isPremium   Boolean       @default(false)
+  isActive    Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  pages       LandingPage[]
+
+  @@index([category])
+  @@index([isActive])
+}
+
+model PageComponent {
+  id           String   @id @default(cuid())
+  name         String
+  type         String
+  category     String
+  schema       Json
+  defaultProps Json
+  preview      String?
+  html         String
+  css          String?
+  javascript   String?
+  isActive     Boolean  @default(true)
+  isPremium    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([type])
+  @@index([category])
+  @@index([isActive])
+}
+
+model PageVersion {
+  id        String      @id @default(cuid())
+  version   Int
+  content   Json
+  createdAt DateTime    @default(now())
+  createdBy String
+  pageId    String
+  user      User        @relation(fields: [createdBy], references: [id])
+  page      LandingPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@unique([pageId, version])
+  @@index([pageId])
+}
+
+model PageAnalytics {
+  id          String      @id @default(cuid())
+  date        DateTime    @default(now())
+  views       Int         @default(0)
+  uniqueViews Int         @default(0)
+  bounceRate  Float       @default(0)
+  avgDuration Int         @default(0)
+  source      String?
+  medium      String?
+  campaign    String?
+  device      String?
+  browser     String?
+  os          String?
+  country     String?
+  city        String?
+  pageId      String
+  page        LandingPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([pageId])
+  @@index([date])
+}
+
+model Domain {
+  id         String     @id @default(cuid())
+  domain     String     @unique
+  type       DomainType @default(PRIMARY)
+  isVerified Boolean    @default(false)
+  isActive   Boolean    @default(true)
+  cname      String?
+  txtRecord  String?
+  verifiedAt DateTime?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  tenantId   String
+  tenant     Tenant     @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([type])
+  @@index([isVerified])
+}
+
+model ProductCategory {
+  id          String            @id @default(cuid())
+  name        String
+  slug        String
+  description String?
+  image       String?
+  parentId    String?
+  sortOrder   Int               @default(0)
+  isActive    Boolean           @default(true)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  tenantId    String
+  products    Product[]
+  parent      ProductCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children    ProductCategory[] @relation("CategoryHierarchy")
+  tenant      Tenant            @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+  @@index([parentId])
+}
+
+model Product {
+  id               String           @id @default(cuid())
+  name             String
+  slug             String
+  description      String?
+  shortDescription String?
+  sku              String
+  barcode          String?
+  type             ProductType
+  status           ProductStatus    @default(DRAFT)
+  price            Float
+  compareAtPrice   Float?
+  cost             Float?
+  downloadUrl      String?
+  downloadLimit    Int?
+  downloadExpiry   Int?
+  weight           Float?
+  length           Float?
+  width            Float?
+  height           Float?
+  requiresShipping Boolean          @default(false)
+  images           Json?
+  featuredImage    String?
+  metaTitle        String?
+  metaDescription  String?
+  tags             String[]
+  isActive         Boolean          @default(true)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  tenantId         String
+  categoryId       String?
+  inventory        Inventory[]
+  orderItems       OrderItem[]
+  category         ProductCategory? @relation(fields: [categoryId], references: [id])
+  tenant           Tenant           @relation(fields: [tenantId], references: [id])
+  variants         ProductVariant[]
+
+  @@unique([tenantId, sku])
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+  @@index([categoryId])
+  @@index([type])
+  @@index([status])
+}
+
+model ProductVariant {
+  id             String      @id @default(cuid())
+  productId      String
+  name           String
+  sku            String
+  barcode        String?
+  options        Json
+  price          Float?
+  compareAtPrice Float?
+  cost           Float?
+  weight         Float?
+  length         Float?
+  width          Float?
+  height         Float?
+  image          String?
+  isActive       Boolean     @default(true)
+  sortOrder      Int         @default(0)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  inventory      Inventory[]
+  orderItems     OrderItem[]
+  product        Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, sku])
+  @@index([productId])
+}
+
+model Inventory {
+  id                  String              @id @default(cuid())
+  productId           String
+  variantId           String?
+  quantity            Int                 @default(0)
+  reservedQuantity    Int                 @default(0)
+  availableQuantity   Int                 @default(0)
+  trackQuantity       Boolean             @default(true)
+  allowBackorder      Boolean             @default(false)
+  lowStockThreshold   Int?
+  location            String              @default("main")
+  averageCost         Float?
+  lastRestockDate     DateTime?
+  lastRestockQuantity Int?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  product             Product             @relation(fields: [productId], references: [id])
+  variant             ProductVariant?     @relation(fields: [variantId], references: [id])
+  movements           InventoryMovement[]
+
+  @@unique([productId, variantId, location])
+  @@index([productId])
+  @@index([variantId])
+  @@index([location])
+}
+
+model InventoryMovement {
+  id          String            @id @default(cuid())
+  inventoryId String
+  type        InventoryMoveType
+  quantity    Int
+  reason      String?
+  reference   String?
+  notes       String?
+  createdAt   DateTime          @default(now())
+  createdBy   String?
+  inventory   Inventory         @relation(fields: [inventoryId], references: [id])
+
+  @@index([inventoryId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+model Order {
+  id              String           @id @default(cuid())
+  orderNumber     String           @unique
+  status          OrderStatus      @default(PENDING)
+  customerId      String?
+  customerEmail   String
+  customerPhone   String?
+  subtotal        Float
+  taxAmount       Float            @default(0)
+  shippingAmount  Float            @default(0)
+  discountAmount  Float            @default(0)
+  total           Float
+  discountCode    String?
+  discountType    DiscountType?
+  discountValue   Float?
+  shippingMethod  String?
+  trackingNumber  String?
+  shippedAt       DateTime?
+  deliveredAt     DateTime?
+  paymentStatus   PaymentStatus    @default(PENDING)
+  paymentMethod   String?
+  paidAt          DateTime?
+  customerNotes   String?
+  internalNotes   String?
+  source          String?
+  tags            String[]
+  metadata        Json?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  canceledAt      DateTime?
+  completedAt     DateTime?
+  tenantId        String
+  billingAddress  BillingAddress?
+  fulfillments    Fulfillment[]
+  customer        Contact?         @relation(fields: [customerId], references: [id])
+  tenant          Tenant           @relation(fields: [tenantId], references: [id])
+  items           OrderItem[]
+  payments        Payment[]
+  refunds         Refund[]
+  shippingAddress ShippingAddress?
+
+  @@index([tenantId])
+  @@index([customerId])
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id                String          @id @default(cuid())
+  orderId           String
+  productId         String
+  variantId         String?
+  productName       String
+  variantName       String?
+  sku               String
+  price             Float
+  quantity          Int
+  subtotal          Float
+  discountAmount    Float           @default(0)
+  total             Float
+  fulfilledQuantity Int             @default(0)
+  refundedQuantity  Int             @default(0)
+  downloadUrl       String?
+  downloadCount     Int             @default(0)
+  downloadExpiry    DateTime?
+  metadata          Json?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  order             Order           @relation(fields: [orderId], references: [id])
+  product           Product         @relation(fields: [productId], references: [id])
+  variant           ProductVariant? @relation(fields: [variantId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+  @@index([variantId])
+}
+
+model ShippingAddress {
+  id         String   @id @default(cuid())
+  orderId    String   @unique
+  firstName  String
+  lastName   String
+  company    String?
+  address1   String
+  address2   String?
+  city       String
+  state      String?
+  country    String
+  postalCode String
+  phone      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+}
+
+model BillingAddress {
+  id             String   @id @default(cuid())
+  orderId        String   @unique
+  firstName      String
+  lastName       String
+  company        String?
+  address1       String
+  address2       String?
+  city           String
+  state          String?
+  country        String
+  postalCode     String
+  phone          String?
+  sameAsShipping Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  order          Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+}
+
+model Fulfillment {
+  id              String            @id @default(cuid())
+  orderId         String
+  status          FulfillmentStatus @default(PENDING)
+  trackingCompany String?
+  trackingNumber  String?
+  trackingUrl     String?
+  shippedAt       DateTime?
+  deliveredAt     DateTime?
+  notes           String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  order           Order             @relation(fields: [orderId], references: [id])
+  items           FulfillmentItem[]
+
+  @@index([orderId])
+  @@index([status])
+}
+
+model FulfillmentItem {
+  id            String      @id @default(cuid())
+  fulfillmentId String
+  orderItemId   String
+  quantity      Int
+  fulfillment   Fulfillment @relation(fields: [fulfillmentId], references: [id], onDelete: Cascade)
+
+  @@index([fulfillmentId])
+  @@index([orderItemId])
+}
+
+model Refund {
+  id              String       @id @default(cuid())
+  orderId         String
+  amount          Float
+  reason          String?
+  status          RefundStatus @default(PENDING)
+  gatewayRefundId String?
+  processedAt     DateTime?
+  notes           String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  order           Order        @relation(fields: [orderId], references: [id])
+  items           RefundItem[]
+
+  @@index([orderId])
+  @@index([status])
+}
+
+model RefundItem {
+  id          String @id @default(cuid())
+  refundId    String
+  orderItemId String
+  quantity    Int
+  refund      Refund @relation(fields: [refundId], references: [id], onDelete: Cascade)
+
+  @@index([refundId])
+  @@index([orderItemId])
+}
+
+model Team {
+  id          String       @id @default(cuid())
+  name        String
+  description String?
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  tenantId    String
+  ownerId     String
+  tenant      Tenant       @relation(fields: [tenantId], references: [id])
+  owner       User         @relation("TeamOwner", fields: [ownerId], references: [id])
+  members     TeamMember[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@index([ownerId])
+}
+
+model TeamMember {
+  id         String         @id @default(cuid())
+  joinedAt   DateTime       @default(now())
+  roleId     String
+  teamId     String
+  userId     String
+  invitedBy  String?
+  invitedAt  DateTime?
+  acceptedAt DateTime?
+  isActive   Boolean        @default(true)
+  team       Team           @relation(fields: [teamId], references: [id])
+  user       User           @relation(fields: [userId], references: [id])
+  role       TeamRole       @relation(fields: [roleId], references: [id])
+
+  @@unique([teamId, userId])
+  @@index([teamId])
+  @@index([userId])
+  @@index([roleId])
+}
+
+model TeamRole {
+  id          String       @id @default(cuid())
+  name        String
+  description String?
+  permissions Json
+  isSystem    Boolean      @default(false)
+  isActive    Boolean      @default(true)
+  sortOrder   Int          @default(0)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  tenantId    String
+  tenant      Tenant       @relation(fields: [tenantId], references: [id])
+  members     TeamMember[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+}
+
+model Permission {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  category    String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Social Media Management Models
+model SocialMediaPlatform {
+  id                   String                  @id @default(cuid())
+  name                 String                  @unique
+  displayName          String
+  icon                 String?
+  color                String?
+  authType             SocialMediaAuthType     @default(OAUTH2)
+  authEndpoint         String?
+  tokenEndpoint        String?
+  apiBaseUrl           String?
+  isActive             Boolean                 @default(true)
+  supportedFeatures    Json                    // Features like posting, messaging, analytics
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+  connections          SocialMediaConnection[]
+  posts                SocialMediaPost[]
+  conversations        SocialMediaConversation[]
+  analytics            SocialMediaAnalytics[]
+}
+
+model SocialMediaConnection {
+  id              String                  @id @default(cuid())
+  platformId      String
+  tenantId        String
+  userId          String?
+  accountId       String                  // Platform account ID
+  accountName     String
+  accountHandle   String?
+  accessToken     String
+  refreshToken    String?
+  tokenExpiry     DateTime?
+  scope           String[]
+  permissions     String[]
+  isActive        Boolean                 @default(true)
+  lastSync        DateTime?
+  syncError       String?
+  metadata        Json?                   // Store platform-specific data
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  platform        SocialMediaPlatform     @relation(fields: [platformId], references: [id])
+  tenant          Tenant                  @relation(fields: [tenantId], references: [id])
+  user            User?                   @relation("SocialMediaConnectionUser", fields: [userId], references: [id])
+  posts           SocialMediaPost[]
+  schedules       SocialMediaSchedule[]
+  conversations   SocialMediaConversation[]
+  messages        SocialMediaMessage[]
+  settings        SocialMediaSettings[]
+  analytics       SocialMediaAnalytics[]
+
+  @@unique([tenantId, platformId, accountId])
+  @@index([tenantId])
+  @@index([platformId])
+  @@index([userId])
+}
+
+model SocialMediaPost {
+  id               String                   @id @default(cuid())
+  tenantId         String
+  connectionId     String
+  platformId       String
+  content          String
+  mediaUrls        String[]
+  hashTags         String[]
+  mentions         String[]
+  status           SocialMediaPostStatus    @default(DRAFT)
+  platformPostId   String?                  // ID from the platform
+  publishedAt      DateTime?
+  scheduledAt      DateTime?
+  failedAt         DateTime?
+  failureReason    String?
+  engagement       Json?                    // likes, comments, shares, views
+  reach            Int?
+  impressions      Int?
+  clickCount       Int?
+  saveCount        Int?
+  shareCount       Int?
+  likeCount        Int?
+  commentCount     Int?
+  repostCount      Int?
+  viewCount        Int?
+  metadata         Json?                    // Platform-specific data
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+  createdBy        String
+  tenant           Tenant                   @relation(fields: [tenantId], references: [id])
+  connection       SocialMediaConnection    @relation(fields: [connectionId], references: [id])
+  platform         SocialMediaPlatform      @relation(fields: [platformId], references: [id])
+  creator          User                     @relation("SocialMediaPostCreator", fields: [createdBy], references: [id])
+  schedules        SocialMediaSchedule[]
+  analytics        SocialMediaAnalytics[]
+
+  @@index([tenantId])
+  @@index([connectionId])
+  @@index([platformId])
+  @@index([status])
+  @@index([publishedAt])
+  @@index([scheduledAt])
+}
+
+model SocialMediaSchedule {
+  id           String                   @id @default(cuid())
+  tenantId     String
+  connectionId String
+  postId       String?
+  content      String?
+  mediaUrls    String[]
+  hashTags     String[]
+  mentions     String[]
+  scheduledAt  DateTime
+  frequency    SocialMediaFrequency     @default(ONCE)
+  repeatUntil  DateTime?
+  isActive     Boolean                  @default(true)
+  status       SocialMediaScheduleStatus @default(PENDING)
+  lastRun      DateTime?
+  nextRun      DateTime?
+  runCount     Int                      @default(0)
+  maxRuns      Int?
+  templateId   String?
+  metadata     Json?
+  createdAt    DateTime                 @default(now())
+  updatedAt    DateTime                 @updatedAt
+  createdBy    String
+  tenant       Tenant                   @relation(fields: [tenantId], references: [id])
+  connection   SocialMediaConnection    @relation(fields: [connectionId], references: [id])
+  post         SocialMediaPost?         @relation(fields: [postId], references: [id])
+  template     SocialMediaTemplate?     @relation(fields: [templateId], references: [id])
+  creator      User                     @relation("SocialMediaScheduleCreator", fields: [createdBy], references: [id])
+
+  @@index([tenantId])
+  @@index([connectionId])
+  @@index([scheduledAt])
+  @@index([status])
+  @@index([nextRun])
+}
+
+model SocialMediaTemplate {
+  id          String                  @id @default(cuid())
+  tenantId    String
+  name        String
+  description String?
+  content     String
+  mediaUrls   String[]
+  hashTags    String[]
+  mentions    String[]
+  variables   String[]                // Template variables like {product_name}
+  platformIds String[]                // Supported platforms
+  category    String?
+  isActive    Boolean                 @default(true)
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+  createdBy   String
+  tenant      Tenant                  @relation(fields: [tenantId], references: [id])
+  creator     User                    @relation("SocialMediaTemplateCreator", fields: [createdBy], references: [id])
+  schedules   SocialMediaSchedule[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@index([category])
+}
+
+model SocialMediaConversation {
+  id               String                      @id @default(cuid())
+  tenantId         String
+  connectionId     String
+  platformId       String
+  participantId    String                      // Platform user ID
+  participantName  String
+  participantHandle String?
+  participantAvatar String?
+  isVerified       Boolean                     @default(false)
+  status           SocialMediaConversationStatus @default(ACTIVE)
+  labels           String[]
+  lastMessageAt    DateTime?
+  unreadCount      Int                         @default(0)
+  isOnline         Boolean                     @default(false)
+  metadata         Json?
+  createdAt        DateTime                    @default(now())
+  updatedAt        DateTime                    @updatedAt
+  tenant           Tenant                      @relation(fields: [tenantId], references: [id])
+  connection       SocialMediaConnection       @relation(fields: [connectionId], references: [id])
+  platform         SocialMediaPlatform         @relation(fields: [platformId], references: [id])
+  messages         SocialMediaMessage[]
+
+  @@unique([connectionId, participantId])
+  @@index([tenantId])
+  @@index([connectionId])
+  @@index([platformId])
+  @@index([status])
+}
+
+model SocialMediaMessage {
+  id              String                  @id @default(cuid())
+  conversationId  String
+  connectionId    String
+  platformMessageId String?             // ID from the platform
+  content         String?
+  mediaUrl        String?
+  messageType     SocialMediaMessageType @default(TEXT)
+  direction       MessageDirection
+  status          SocialMediaMessageStatus @default(PENDING)
+  isFromUser      Boolean                 @default(false)
+  sentAt          DateTime?
+  deliveredAt     DateTime?
+  readAt          DateTime?
+  failedAt        DateTime?
+  failureReason   String?
+  metadata        Json?
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  userId          String?
+  conversation    SocialMediaConversation @relation(fields: [conversationId], references: [id])
+  connection      SocialMediaConnection   @relation(fields: [connectionId], references: [id])
+  user            User?                   @relation("SocialMediaMessageUser", fields: [userId], references: [id])
+
+  @@index([conversationId])
+  @@index([connectionId])
+  @@index([direction])
+  @@index([status])
+}
+
+model SocialMediaAnalytics {
+  id               String                @id @default(cuid())
+  tenantId         String
+  connectionId     String?
+  platformId       String
+  postId           String?
+  date             DateTime              @default(now())
+  metrics          Json                  // Flexible metrics storage
+  followers        Int?
+  following        Int?
+  posts            Int?
+  engagement       Float?
+  reach            Int?
+  impressions      Int?
+  profileViews     Int?
+  websiteClicks    Int?
+  emailClicks      Int?
+  phoneClicks      Int?
+  directionsClicks Int?
+  topPosts         Json?
+  audienceInsights Json?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  tenant           Tenant                @relation(fields: [tenantId], references: [id])
+  connection       SocialMediaConnection? @relation(fields: [connectionId], references: [id])
+  platform         SocialMediaPlatform   @relation(fields: [platformId], references: [id])
+  post             SocialMediaPost?      @relation(fields: [postId], references: [id])
+
+  @@unique([tenantId, connectionId, platformId, date])
+  @@index([tenantId])
+  @@index([connectionId])
+  @@index([platformId])
+  @@index([date])
+}
+
+model SocialMediaSettings {
+  id                  String                @id @default(cuid())
+  tenantId            String
+  connectionId        String?
+  userId              String
+  autoPosting         Boolean               @default(false)
+  postTiming          SocialMediaPostTiming @default(OPTIMAL)
+  crossPosting        Boolean               @default(true)
+  contentModeration   Boolean               @default(true)
+  linkShortening      Boolean               @default(true)
+  watermark           Boolean               @default(false)
+  defaultHashtags     String[]
+  mentionNotifications Boolean              @default(true)
+  dmNotifications     Boolean               @default(true)
+  commentNotifications Boolean              @default(true)
+  postNotifications   Boolean               @default(true)
+  failureNotifications Boolean              @default(true)
+  weeklyReports       Boolean               @default(true)
+  monthlyReports      Boolean               @default(true)
+  emailNotifications  Boolean               @default(true)
+  pushNotifications   Boolean               @default(true)
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  tenant              Tenant                @relation(fields: [tenantId], references: [id])
+  connection          SocialMediaConnection? @relation(fields: [connectionId], references: [id])
+  user                User                  @relation("SocialMediaSettingsUser", fields: [userId], references: [id])
+
+  @@unique([tenantId, userId, connectionId])
+  @@index([tenantId])
+  @@index([userId])
+  @@index([connectionId])
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  INCOMPLETE
+  INCOMPLETE_EXPIRED
+  PAST_DUE
+  TRIALING
+  UNPAID
+}
+
+enum BillingInterval {
+  MONTHLY
+  YEARLY
+}
+
+enum BillingInvoiceStatus {
+  PENDING
+  PAID
+  FAILED
+  VOID
+}
+
+enum Role {
+  SUPER_ADMIN
+  TENANT_ADMIN
+  MANAGER
+  MARKETER
+  SALES
+  SUPPORT
+  USER
+}
+
+enum ContactStatus {
+  LEAD
+  ANSWERED
+  NO_ANSWER
+  SHOW
+  NO_SHOW
+  CONTRACT
+  QUALIFIED
+  OPPORTUNITY
+  CUSTOMER
+  LOST
+}
+
+enum PipelineType {
+  CONTACT
+  DEAL
+  TASK
+}
+
+enum DealStage {
+  PROSPECTING
+  QUALIFICATION
+  PROPOSAL
+  NEGOTIATION
+  CLOSED_WON
+  CLOSED_LOST
+}
+
+enum ActivityType {
+  CALL
+  EMAIL
+  MEETING
+  TASK
+  NOTE
+  SMS
+  LINKEDIN_MESSAGE
+  DEMO
+  FOLLOW_UP
+  PROPOSAL_SENT
+  CONTRACT_SENT
+  PAYMENT_RECEIVED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum AuditAction {
+  CREATE_USER
+  UPDATE_USER
+  DELETE_USER
+  CREATE_TENANT
+  UPDATE_TENANT
+  DELETE_TENANT
+  UPDATE_PLAN
+  CREATE_PLAN
+  DELETE_PLAN
+  LOGIN
+  LOGOUT
+  PERMISSION_CHANGE
+  SYSTEM_CONFIG_CHANGE
+  DATA_EXPORT
+  DATA_IMPORT
+  PASSWORD_RESET
+  EMAIL_VERIFICATION
+}
+
+enum WhatsAppConversationStatus {
+  ACTIVE
+  ARCHIVED
+  BLOCKED
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum WhatsAppMessageType {
+  TEXT
+  IMAGE
+  DOCUMENT
+  AUDIO
+  VIDEO
+  LOCATION
+  TEMPLATE
+  REACTION
+  CONTACTS
+}
+
+enum WhatsAppMessageStatus {
+  PENDING
+  SENT
+  DELIVERED
+  READ
+  FAILED
+  DELETED
+}
+
+enum EmailProviderType {
+  INTERNAL_SMTP
+  SENDGRID
+  MAILGUN
+  AWS_SES
+  POSTMARK
+  SMTP2GO
+  SENDINBLUE
+  MAILCHIMP
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENDING
+  SENT
+  PAUSED
+  CANCELED
+  FAILED
+}
+
+enum CampaignType {
+  REGULAR
+  AUTOMATED
+  TRANSACTIONAL
+  AB_TEST
+}
+
+enum SubscriberStatus {
+  PENDING
+  ACTIVE
+  UNSUBSCRIBED
+  BOUNCED
+  COMPLAINED
+  CLEANED
+}
+
+enum EmailFrequency {
+  ALL
+  WEEKLY
+  MONTHLY
+  NEVER
+}
+
+enum EmailStatus {
+  PENDING
+  SENDING
+  SENT
+  DELIVERED
+  OPENED
+  CLICKED
+  BOUNCED
+  COMPLAINED
+  UNSUBSCRIBED
+  FAILED
+}
+
+enum WorkflowStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+enum WorkflowTriggerType {
+  CONTACT_CREATED
+  CONTACT_UPDATED
+  CONTACT_STAGE_CHANGED
+  CONTACT_TAG_ADDED
+  CONTACT_SCORE_CHANGED
+  DEAL_CREATED
+  DEAL_UPDATED
+  DEAL_STAGE_CHANGED
+  DEAL_WON
+  DEAL_LOST
+  COMPANY_CREATED
+  COMPANY_UPDATED
+  FORM_SUBMITTED
+  EMAIL_OPENED
+  EMAIL_CLICKED
+  EMAIL_BOUNCED
+  EMAIL_UNSUBSCRIBED
+  WHATSAPP_MESSAGE_RECEIVED
+  WHATSAPP_MESSAGE_SENT
+  WHATSAPP_CONVERSATION_STARTED
+  TIME_BASED
+  RECURRING
+  ACTIVITY_COMPLETED
+  TASK_CREATED
+  TASK_COMPLETED
+  TASK_OVERDUE
+  WEBHOOK
+  API_CALL
+}
+
+enum WorkflowActionType {
+  UPDATE_CONTACT
+  UPDATE_CONTACT_STAGE
+  ADD_CONTACT_TAG
+  REMOVE_CONTACT_TAG
+  UPDATE_CONTACT_SCORE
+  ASSIGN_CONTACT
+  CREATE_DEAL
+  UPDATE_DEAL
+  UPDATE_DEAL_STAGE
+  ASSIGN_DEAL
+  UPDATE_COMPANY
+  ASSIGN_COMPANY
+  CREATE_TASK
+  UPDATE_TASK
+  ASSIGN_TASK
+  CREATE_ACTIVITY
+  SEND_EMAIL
+  ADD_TO_EMAIL_LIST
+  REMOVE_FROM_EMAIL_LIST
+  UPDATE_EMAIL_SUBSCRIPTION
+  SEND_WHATSAPP
+  SEND_WHATSAPP_TEMPLATE
+  SEND_NOTIFICATION
+  SEND_SLACK_MESSAGE
+  UPDATE_FIELD
+  CALCULATE_FIELD
+  WAIT
+  BRANCH_CONDITION
+  WEBHOOK
+  API_REQUEST
+  RUN_WORKFLOW
+  STOP_WORKFLOW
+}
+
+enum ExecutionStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+  PAUSED
+}
+
+enum ScheduleType {
+  ONCE
+  DAILY
+  WEEKLY
+  MONTHLY
+  CRON
+}
+
+enum VariableType {
+  STRING
+  NUMBER
+  BOOLEAN
+  DATE
+  DATETIME
+  JSON
+  ARRAY
+}
+
+enum QuotationStatus {
+  DRAFT
+  SENT
+  VIEWED
+  ACCEPTED
+  REJECTED
+  EXPIRED
+  CONVERTED
+}
+
+enum ProformaStatus {
+  DRAFT
+  SENT
+  CONVERTED
+  CANCELLED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  VIEWED
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+  CANCELLED
+  REFUNDED
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED
+}
+
+enum PageStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum DomainType {
+  SUBDOMAIN
+  CUSTOM
+  PRIMARY
+  SECONDARY
+}
+
+enum ProductType {
+  PHYSICAL
+  DIGITAL
+  SERVICE
+}
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum InventoryMoveType {
+  PURCHASE
+  SALE
+  ADJUSTMENT
+  RETURN
+  DAMAGE
+  TRANSFER
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  PAID
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+  CANCELED
+}
+
+enum PaymentMethod {
+  CREDIT_CARD
+  DEBIT_CARD
+  PAYPAL
+  BANK_TRANSFER
+  CASH
+  CHECK
+  OTHER
+}
+
+enum FulfillmentStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELED
+  RETURNED
+}
+
+enum RefundStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELED
+}
+
+// Social Media Enums
+enum SocialMediaAuthType {
+  OAUTH2
+  API_KEY
+  BASIC_AUTH
+  BEARER_TOKEN
+}
+
+enum SocialMediaPostStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHING
+  PUBLISHED
+  FAILED
+  CANCELLED
+}
+
+enum SocialMediaFrequency {
+  ONCE
+  DAILY
+  WEEKLY
+  MONTHLY
+  CUSTOM
+}
+
+enum SocialMediaScheduleStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+  PAUSED
+}
+
+enum SocialMediaConversationStatus {
+  ACTIVE
+  ARCHIVED
+  BLOCKED
+  MUTED
+}
+
+enum SocialMediaMessageType {
+  TEXT
+  IMAGE
+  VIDEO
+  AUDIO
+  FILE
+  LINK
+  STICKER
+  GIF
+  LOCATION
+}
+
+enum SocialMediaMessageStatus {
+  PENDING
+  SENT
+  DELIVERED
+  READ
+  FAILED
+  CANCELLED
+}
+
+enum SocialMediaPostTiming {
+  IMMEDIATE
+  OPTIMAL
+  SCHEDULED
+}
+
+// Google My Business Management Models
+model GoogleMyBusinessAccount {
+  id                String                      @id @default(cuid())
+  tenantId          String
+  userId            String?
+  businessName      String
+  businessAddress   String?
+  businessPhone     String?
+  businessWebsite   String?
+  businessCategory  String?
+  businessType      BusinessType                @default(LOCAL)
+  googleAccountId   String                      @unique
+  googlePlaceId     String?
+  isVerified        Boolean                     @default(false)
+  verificationMethod String?
+  accessToken       String
+  refreshToken      String?
+  tokenExpiry       DateTime?
+  scope             String[]
+  isActive          Boolean                     @default(true)
+  lastSync          DateTime?
+  syncError         String?
+  businessHours     Json?                       // Store business hours
+  attributes        Json?                       // Store business attributes
+  photos            String[]                    // Store photo URLs
+  logo              String?
+  coverPhoto        String?
+  metadata          Json?
+  createdAt         DateTime                    @default(now())
+  updatedAt         DateTime                    @updatedAt
+  tenant            Tenant                      @relation(fields: [tenantId], references: [id])
+  user              User?                       @relation("GMBAccountUser", fields: [userId], references: [id])
+  locations         GoogleMyBusinessLocation[]
+  reviews           GoogleMyBusinessReview[]
+  posts             GoogleMyBusinessPost[]
+  insights          GoogleMyBusinessInsight[]
+  settings          GoogleMyBusinessSettings[]
+
+  @@unique([tenantId, googleAccountId])
+  @@index([tenantId])
+  @@index([userId])
+  @@index([isActive])
+}
+
+model GoogleMyBusinessLocation {
+  id               String                    @id @default(cuid())
+  accountId        String
+  googleLocationId String                    @unique
+  name             String
+  address          String
+  city             String?
+  state            String?
+  postalCode       String?
+  country          String?
+  phoneNumber      String?
+  website          String?
+  category         String?
+  rating           Float?
+  reviewCount      Int                       @default(0)
+  latitude         Float?
+  longitude        Float?
+  businessHours    Json?
+  specialHours     Json?
+  attributes       Json?
+  photos           String[]
+  isVerified       Boolean                   @default(false)
+  isPrimary        Boolean                   @default(false)
+  status           GMBLocationStatus         @default(UNVERIFIED)
+  visibility       GMBVisibility             @default(PUBLIC)
+  lastSync         DateTime?
+  metadata         Json?
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+  account          GoogleMyBusinessAccount   @relation(fields: [accountId], references: [id])
+  reviews          GoogleMyBusinessReview[]
+  posts            GoogleMyBusinessPost[]
+  insights         GoogleMyBusinessInsight[]
+
+  @@index([accountId])
+  @@index([status])
+  @@index([rating])
+}
+
+model GoogleMyBusinessReview {
+  id             String                   @id @default(cuid())
+  accountId      String
+  locationId     String?
+  googleReviewId String                   @unique
+  reviewerName   String
+  reviewerPhoto  String?
+  rating         Int
+  comment        String?
+  reviewTime     DateTime
+  isReply        Boolean                  @default(false)
+  replyText      String?
+  replyTime      DateTime?
+  status         GMBReviewStatus          @default(PUBLISHED)
+  sentiment      ReviewSentiment?
+  tags           String[]
+  isStarred      Boolean                  @default(false)
+  lastSync       DateTime?
+  metadata       Json?
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  account        GoogleMyBusinessAccount  @relation(fields: [accountId], references: [id])
+  location       GoogleMyBusinessLocation? @relation(fields: [locationId], references: [id])
+
+  @@index([accountId])
+  @@index([locationId])
+  @@index([rating])
+  @@index([reviewTime])
+  @@index([status])
+}
+
+model GoogleMyBusinessPost {
+  id           String                  @id @default(cuid())
+  accountId    String
+  locationId   String?
+  googlePostId String?                 @unique
+  postType     GMBPostType             @default(STANDARD)
+  summary      String?
+  content      String
+  mediaUrls    String[]
+  ctaType      GMBCallToActionType?
+  ctaUrl       String?
+  eventTitle   String?
+  eventStart   DateTime?
+  eventEnd     DateTime?
+  offerTitle   String?
+  offerStart   DateTime?
+  offerEnd     DateTime?
+  offerTerms   String?
+  offerCode    String?
+  status       GMBPostStatus           @default(DRAFT)
+  publishTime  DateTime?
+  scheduledAt  DateTime?
+  views        Int                     @default(0)
+  clicks       Int                     @default(0)
+  callClicks   Int                     @default(0)
+  websiteClicks Int                    @default(0)
+  lastSync     DateTime?
+  metadata     Json?
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+  createdBy    String
+  account      GoogleMyBusinessAccount @relation(fields: [accountId], references: [id])
+  location     GoogleMyBusinessLocation? @relation(fields: [locationId], references: [id])
+  creator      User                    @relation("GMBPostCreator", fields: [createdBy], references: [id])
+
+  @@index([accountId])
+  @@index([locationId])
+  @@index([status])
+  @@index([publishTime])
+  @@index([scheduledAt])
+}
+
+model GoogleMyBusinessInsight {
+  id           String                  @id @default(cuid())
+  accountId    String
+  locationId   String?
+  date         DateTime
+  metricType   GMBMetricType
+  value        Float
+  period       GMBInsightPeriod        @default(DAILY)
+  dimensions   Json?                   // Additional dimensions like device, query, etc.
+  lastSync     DateTime?
+  createdAt    DateTime                @default(now())
+  account      GoogleMyBusinessAccount @relation(fields: [accountId], references: [id])
+  location     GoogleMyBusinessLocation? @relation(fields: [locationId], references: [id])
+
+  @@unique([accountId, locationId, date, metricType, period])
+  @@index([accountId])
+  @@index([locationId])
+  @@index([date])
+  @@index([metricType])
+}
+
+model GoogleMyBusinessSettings {
+  id                    String                  @id @default(cuid())
+  tenantId              String
+  accountId             String
+  userId                String
+  autoReplyEnabled      Boolean                 @default(false)
+  autoReplyMessage      String?
+  reviewNotifications   Boolean                 @default(true)
+  postNotifications     Boolean                 @default(true)
+  insightNotifications  Boolean                 @default(false)
+  emailNotifications    Boolean                 @default(true)
+  pushNotifications     Boolean                 @default(true)
+  weeklyReports         Boolean                 @default(true)
+  monthlyReports        Boolean                 @default(true)
+  syncFrequency         GMBSyncFrequency        @default(DAILY)
+  timezone              String                  @default("UTC")
+  defaultPostType       GMBPostType             @default(STANDARD)
+  autoPublishPosts      Boolean                 @default(false)
+  moderateReviews       Boolean                 @default(true)
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  tenant                Tenant                  @relation(fields: [tenantId], references: [id])
+  account               GoogleMyBusinessAccount @relation(fields: [accountId], references: [id])
+  user                  User                    @relation("GMBSettingsUser", fields: [userId], references: [id])
+
+  @@unique([tenantId, accountId, userId])
+  @@index([tenantId])
+  @@index([accountId])
+  @@index([userId])
+}
+
+// Google My Business Enums
+enum BusinessType {
+  LOCAL
+  SERVICE_AREA
+  BRAND
+  ORGANIZATION
+}
+
+enum GMBLocationStatus {
+  UNVERIFIED
+  VERIFIED
+  SUSPENDED
+  DISABLED
+  DUPLICATE
+  MOVED
+}
+
+enum GMBVisibility {
+  PUBLIC
+  PRIVATE
+  UNLISTED
+}
+
+enum GMBReviewStatus {
+  PUBLISHED
+  FLAGGED
+  REMOVED
+  PENDING
+}
+
+enum ReviewSentiment {
+  POSITIVE
+  NEGATIVE
+  NEUTRAL
+  MIXED
+}
+
+enum GMBPostType {
+  STANDARD
+  EVENT
+  OFFER
+  PRODUCT
+  COVID_19
+}
+
+enum GMBCallToActionType {
+  BOOK
+  ORDER
+  SHOP
+  LEARN_MORE
+  SIGN_UP
+  CALL
+  GET_QUOTE
+}
+
+enum GMBPostStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  EXPIRED
+  REJECTED
+}
+
+enum GMBMetricType {
+  SEARCH_VIEWS_DIRECT
+  SEARCH_VIEWS_BRANDED
+  SEARCH_VIEWS_DISCOVERY
+  SEARCH_VIEWS_TOTAL
+  MAP_VIEWS_DESKTOP
+  MAP_VIEWS_MOBILE
+  MAP_VIEWS_TOTAL
+  CUSTOMER_ACTIONS_WEBSITE
+  CUSTOMER_ACTIONS_PHONE
+  CUSTOMER_ACTIONS_DRIVING_DIRECTIONS
+  CUSTOMER_ACTIONS_TOTAL
+  PHOTO_VIEWS_MERCHANT
+  PHOTO_VIEWS_CUSTOMER
+  PHOTO_VIEWS_TOTAL
+  PHOTO_COUNT_MERCHANT
+  PHOTO_COUNT_CUSTOMER
+  PHOTO_COUNT_TOTAL
+  LOCAL_POST_VIEWS
+  LOCAL_POST_ACTIONS
+}
+
+enum GMBInsightPeriod {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum GMBSyncFrequency {
+  REAL_TIME
+  HOURLY
+  DAILY
+  WEEKLY
+}

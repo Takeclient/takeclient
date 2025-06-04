@@ -1,0 +1,42 @@
+.draggable-item {
+    cursor: move;
+}
+.draggable-item:hover {
+    background-color: #f9fafb;
+}
+.form-field-placeholder {
+    border: 2px dashed #e5e7eb;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 8px;
+}
+.form-field {
+    position: relative;
+    padding: 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    background-color: white;
+}
+.form-field:hover .field-actions {
+    display: flex;
+}
+.field-actions {
+    display: none;
+    position: absolute;
+    right: 8px;
+    top: 8px;
+}
+.dropzone {
+    min-height: 300px;
+    border: 2px dashed #e5e7eb;
+    padding: 12px;
+    background-color: #f9fafb;
+    border-radius: 4px;
+}
+.dropzone.highlight {
+    background-color: #f0f9ff;
+    border-color: #93c5fd;
+}
