@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/app/lib/prisma';
+import { triggerWorkflows } from '@/app/lib/workflow-triggers';
 
 interface FormField {
   id: string;
@@ -154,6 +155,14 @@ export async function POST(
         console.error('Error creating/updating contact:', contactError);
         // Don't fail the submission if contact creation fails
       }
+    }
+
+    // Trigger workflows for form submission
+    try {
+      await triggerWorkflows.formSubmitted(submission, form.tenantId);
+    } catch (workflowError) {
+      console.error('Error triggering workflows for form submission:', workflowError);
+      // Don't fail the form submission if workflow triggers fail
     }
 
     return NextResponse.json({

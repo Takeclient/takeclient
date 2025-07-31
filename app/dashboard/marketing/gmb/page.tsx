@@ -120,6 +120,13 @@ export default function GMBDashboardPage() {
             <p className="text-gray-600 mt-1">Manage your Google Business listings and customer interactions</p>
           </div>
           <div className="flex space-x-3">
+            <Link
+              href="/dashboard/marketing/gmb/ai-agent"
+              className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors"
+            >
+              <i className="fas fa-brain mr-2"></i>
+              AI Agent
+            </Link>
             <button
               onClick={handleConnectGMB}
               className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
@@ -227,7 +234,22 @@ export default function GMBDashboardPage() {
           </div>
 
           {/* Quick Actions */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+            <Link
+              href="/dashboard/marketing/gmb/ai-agent"
+              className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
+            >
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <i className="fas fa-brain text-2xl text-purple-600"></i>
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-lg font-semibold text-gray-900">AI Agent</h3>
+                  <p className="text-sm text-gray-600">Smart review management</p>
+                </div>
+              </div>
+            </Link>
+
             <Link
               href="/dashboard/marketing/gmb/reviews"
               className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"

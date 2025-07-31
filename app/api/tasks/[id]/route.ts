@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/lib/auth';
 import { prisma } from '@/app/lib/prisma';
+import { triggerWorkflows } from '@/app/lib/workflow-triggers';
 
 export async function GET(
   req: NextRequest,
@@ -255,6 +256,16 @@ export async function PATCH(
         },
       },
     });
+
+    // Trigger workflows for task completion
+    if (status === 'COMPLETED' && existingTask.status !== 'COMPLETED') {
+      try {
+        await triggerWorkflows.taskCompleted(task, user.tenantId, user.id);
+      } catch (workflowError) {
+        console.error('Error triggering workflows for task completion:', workflowError);
+        // Don't fail the task update if workflow triggers fail
+      }
+    }
 
     return NextResponse.json(task);
   } catch (error) {

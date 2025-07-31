@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeftIcon, PlusIcon, PencilIcon, TrashIcon, ChartBarIcon, CogIcon, ArrowTrendingUpIcon, ArrowTrendingDownIcon } from '@heroicons/react/24/outline';
+import { ArrowLeftIcon, PlusIcon, PencilIcon, TrashIcon, ChartBarIcon, CogIcon, ArrowTrendingUpIcon, ArrowTrendingDownIcon, SparklesIcon, ExclamationTriangleIcon, LightBulbIcon, BoltIcon } from '@heroicons/react/24/outline';
 import { Tab } from '@headlessui/react';
 
 interface Campaign {
@@ -22,8 +23,27 @@ interface Campaign {
   endDate?: string;
 }
 
+interface AIInsight {
+  id: string;
+  type: 'optimization' | 'budget_alert' | 'audience' | 'recommendation';
+  title: string;
+  description: string;
+  impact: 'high' | 'medium' | 'low';
+  campaignId?: string;
+  actionable: boolean;
+  createdAt: string;
+}
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
 export default function MetaAdsPage() {
+  const searchParams = useSearchParams();
   const [isConnected, setIsConnected] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [adAccounts, setAdAccounts] = useState<any[]>([]);
+  const [selectedAccount, setSelectedAccount] = useState<string>('');
+  const [authError, setAuthError] = useState<string | null>(null);
   const [campaigns, setCampaigns] = useState<Campaign[]>([
     {
       id: '1',
@@ -81,14 +101,257 @@ export default function MetaAdsPage() {
     pixelId: ''
   });
 
-  const handleConnect = () => {
-    // Mock OAuth flow
-    alert('This would redirect to Facebook OAuth. For now, we\'ll simulate a connection.');
-    setIsConnected(true);
+  // AI Agent Mock Data for Meta Ads
+  const [aiInsights, setAIInsights] = useState<AIInsight[]>([
+    {
+      id: '1',
+      type: 'budget_alert',
+      title: 'Budget Alert: Brand Awareness Campaign',
+      description: 'This campaign has spent 41% of its budget in the first week. Current spending rate is higher than optimal for the campaign duration.',
+      impact: 'high',
+      campaignId: '1',
+      actionable: true,
+      createdAt: '2024-01-20T11:30:00Z'
+    },
+    {
+      id: '2',
+      type: 'audience',
+      title: 'Audience Optimization Opportunity',
+      description: 'Women aged 25-34 show 85% higher conversion rates. Consider creating a separate ad set targeting this demographic.',
+      impact: 'high',
+      campaignId: '2',
+      actionable: true,
+      createdAt: '2024-01-20T10:15:00Z'
+    },
+    {
+      id: '3',
+      type: 'optimization',
+      title: 'Creative Performance Analysis',
+      description: 'Video ads perform 120% better than image ads in your Holiday Sales campaign. Consider shifting budget allocation.',
+      impact: 'medium',
+      campaignId: '3',
+      actionable: true,
+      createdAt: '2024-01-20T09:45:00Z'
+    },
+    {
+      id: '4',
+      type: 'recommendation',
+      title: 'Lookalike Audience Suggestion',
+      description: 'Create a 2% lookalike audience based on your top converting customers to expand reach for Lead Generation campaign.',
+      impact: 'medium',
+      campaignId: '2',
+      actionable: true,
+      createdAt: '2024-01-19T14:20:00Z'
+    }
+  ]);
+
+  const [isGeneratingInsights, setIsGeneratingInsights] = useState(false);
+
+  // Handle OAuth callback and authentication
+  useEffect(() => {
+    const handleAuthCallback = async () => {
+      const authSuccess = searchParams.get('auth');
+      const error = searchParams.get('error');
+      const errorDescription = searchParams.get('error_description');
+      const token = searchParams.get('access_token');
+      const userName = searchParams.get('user');
+
+      if (error) {
+        setAuthError(errorDescription || 'Authentication failed');
+        return;
+      }
+
+      if (authSuccess === 'success') {
+        console.log('Meta authentication successful:', { userName, hasToken: !!token });
+        setIsConnected(true);
+        
+        if (token) {
+          setAccessToken(token);
+          await loadAdAccounts(token);
+        }
+        
+        // Clear URL parameters
+        window.history.replaceState({}, '', '/dashboard/ads/meta');
+      }
+    };
+
+    handleAuthCallback();
+  }, [searchParams]);
+
+  const loadAdAccounts = async (token?: string) => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(`${API_BASE_URL}/api/v1/meta-ads/accounts${token ? `?access_token=${token}` : ''}`, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const accounts = await response.json();
+        setAdAccounts(accounts);
+        if (accounts.length > 0) {
+          setSelectedAccount(accounts[0].id);
+          await loadCampaigns(accounts[0].id, token);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading ad accounts:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadCampaigns = async (accountId: string, token?: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/meta-ads/accounts/${accountId}/campaigns${token ? `?access_token=${token}` : ''}`, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.campaigns) {
+          // Convert Meta campaigns to our Campaign interface
+          const convertedCampaigns = data.campaigns.map((campaign: any) => ({
+            id: campaign.id,
+            name: campaign.name,
+            objective: campaign.objective,
+            status: campaign.status === 'ACTIVE' ? 'Active' : campaign.status === 'PAUSED' ? 'Paused' : 'Completed',
+            budget: parseFloat(campaign.daily_budget || campaign.lifetime_budget || '0') / 100, // Convert cents to dollars
+            spent: 0, // Will be loaded from insights
+            reach: 0,
+            impressions: 0,
+            clicks: 0,
+            conversions: 0,
+            ctr: 0,
+            cpm: 0,
+            startDate: campaign.start_time ? new Date(campaign.start_time).toISOString().split('T')[0] : '',
+            endDate: campaign.stop_time ? new Date(campaign.stop_time).toISOString().split('T')[0] : undefined
+          }));
+          setCampaigns(convertedCampaigns);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading campaigns:', error);
+    }
+  };
+
+  const handleConnect = async () => {
+    try {
+      setIsLoading(true);
+      setAuthError(null);
+      
+      const response = await fetch(`${API_BASE_URL}/api/v1/meta-ads/auth`, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.oauth_url) {
+          // Redirect to Meta OAuth
+          window.location.href = data.oauth_url;
+        } else {
+          setAuthError('Failed to get OAuth URL');
+        }
+      } else {
+        setAuthError('Failed to initiate authentication');
+      }
+    } catch (error) {
+      console.error('Error initiating OAuth:', error);
+      setAuthError('Connection failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSaveConfig = () => {
     alert('Configuration saved! (Mock)');
+  };
+
+  const generateAIInsights = async () => {
+    if (!selectedAccount) return;
+    
+    setIsGeneratingInsights(true);
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/meta-ads/ai/analyze`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ad_account_id: selectedAccount,
+          campaign_ids: campaigns.map(c => c.id),
+          objective: 'CONVERSIONS'
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          // Convert AI insights to our format
+          const newInsights = data.insights.map((insight: any) => ({
+            id: Date.now().toString() + Math.random(),
+            type: insight.type === 'performance_insight' ? 'optimization' : 'recommendation',
+            title: insight.title,
+            description: insight.description,
+            impact: insight.impact,
+            campaignId: insight.campaign_id,
+            actionable: true,
+            createdAt: new Date().toISOString()
+          }));
+          
+          setAIInsights(prev => [...newInsights, ...prev]);
+        }
+      }
+    } catch (error) {
+      console.error('Error generating AI insights:', error);
+      // Fallback to demo insight
+      const newInsight: AIInsight = {
+        id: Date.now().toString(),
+        type: 'optimization',
+        title: 'AI-Generated Meta Campaign Optimization',
+        description: 'Based on recent performance data, consider using automatic placements across Facebook, Instagram, and Audience Network. This could increase reach by 35% while maintaining cost efficiency.',
+        impact: 'high',
+        campaignId: campaigns[0]?.id || '1',
+        actionable: true,
+        createdAt: new Date().toISOString()
+      };
+      
+      setAIInsights(prev => [newInsight, ...prev]);
+    } finally {
+      setIsGeneratingInsights(false);
+    }
+  };
+
+  const dismissInsight = (insightId: string) => {
+    setAIInsights(prev => prev.filter(insight => insight.id !== insightId));
+  };
+
+  const getInsightIcon = (type: string) => {
+    switch (type) {
+      case 'budget_alert':
+        return <ExclamationTriangleIcon className="h-5 w-5" />;
+      case 'audience':
+        return <LightBulbIcon className="h-5 w-5" />;
+      case 'optimization':
+        return <BoltIcon className="h-5 w-5" />;
+      case 'recommendation':
+        return <SparklesIcon className="h-5 w-5" />;
+      default:
+        return <SparklesIcon className="h-5 w-5" />;
+    }
+  };
+
+  const getInsightColor = (type: string, impact: string) => {
+    if (type === 'budget_alert') return 'bg-red-100 text-red-800 border-red-200';
+    if (impact === 'high') return 'bg-orange-100 text-orange-800 border-orange-200';
+    if (impact === 'medium') return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    return 'bg-blue-100 text-blue-800 border-blue-200';
   };
 
   function classNames(...classes: string[]) {
@@ -116,13 +379,50 @@ export default function MetaAdsPage() {
             </div>
           </div>
           {!isConnected && (
-            <button
-              onClick={handleConnect}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <i className="fas fa-plug mr-2"></i>
-              Connect Account
-            </button>
+            <div className="flex flex-col items-end">
+              <button
+                onClick={handleConnect}
+                disabled={isLoading}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? (
+                  <>
+                    <i className="fas fa-spinner fa-spin mr-2"></i>
+                    Connecting...
+                  </>
+                ) : (
+                  <>
+                    <i className="fas fa-plug mr-2"></i>
+                    Connect Account
+                  </>
+                )}
+              </button>
+              {authError && (
+                <p className="text-red-600 text-sm mt-2 max-w-xs text-right">{authError}</p>
+              )}
+            </div>
+          )}
+          
+          {isConnected && adAccounts.length > 0 && (
+            <div className="flex items-center space-x-4">
+              <select
+                value={selectedAccount}
+                onChange={(e) => {
+                  setSelectedAccount(e.target.value);
+                  loadCampaigns(e.target.value, accessToken || undefined);
+                }}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                {adAccounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.name} ({account.currency})
+                  </option>
+                ))}
+              </select>
+              <span className="text-sm text-gray-500">
+                {adAccounts.find(acc => acc.id === selectedAccount)?.business_name}
+              </span>
+            </div>
           )}
         </div>
       </div>
@@ -154,6 +454,20 @@ export default function MetaAdsPage() {
             }
           >
             Analytics
+          </Tab>
+          <Tab
+            className={({ selected }) =>
+              classNames(
+                'w-full rounded-lg py-2.5 text-sm font-medium leading-5',
+                'ring-white ring-opacity-60 ring-offset-2 ring-offset-blue-400 focus:outline-none focus:ring-2',
+                selected
+                  ? 'bg-white text-blue-700 shadow'
+                  : 'text-gray-600 hover:bg-white/[0.12] hover:text-gray-800'
+              )
+            }
+          >
+            <SparklesIcon className="h-4 w-4 mr-2 inline" />
+            AI Assistant
           </Tab>
           <Tab
             className={({ selected }) =>
@@ -416,6 +730,171 @@ export default function MetaAdsPage() {
             ) : (
               <div className="text-center py-12">
                 <p className="text-gray-600">Connect your Meta Ads account to view analytics</p>
+              </div>
+            )}
+          </Tab.Panel>
+
+          {/* AI Assistant Tab */}
+          <Tab.Panel>
+            {isConnected ? (
+              <div className="space-y-6">
+                {/* Header with action button */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">AI Campaign Assistant</h2>
+                    <p className="text-gray-600 mt-1">Get AI-powered insights, recommendations, and alerts for your Meta Ads campaigns</p>
+                  </div>
+                  <button
+                    onClick={generateAIInsights}
+                    disabled={isGeneratingInsights}
+                    className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <SparklesIcon className="h-5 w-5 mr-2" />
+                    {isGeneratingInsights ? 'Generating...' : 'Generate New Insights'}
+                  </button>
+                </div>
+
+                {/* AI Insights Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {aiInsights.map((insight) => (
+                    <div
+                      key={insight.id}
+                      className={`border rounded-lg p-6 ${getInsightColor(insight.type, insight.impact)}`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start space-x-3">
+                          <div className="flex-shrink-0 mt-1">
+                            {getInsightIcon(insight.type)}
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-lg mb-2">{insight.title}</h3>
+                            <p className="text-sm mb-4">{insight.description}</p>
+                            
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-4">
+                                <span className="text-xs font-medium uppercase tracking-wide">
+                                  {insight.type.replace('_', ' ')}
+                                </span>
+                                <span className="text-xs">
+                                  Impact: {insight.impact}
+                                </span>
+                                {insight.campaignId && (
+                                  <span className="text-xs">
+                                    Campaign: {campaigns.find(c => c.id === insight.campaignId)?.name}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => dismissInsight(insight.id)}
+                          className="text-gray-400 hover:text-gray-600 ml-4"
+                        >
+                          <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                          </svg>
+                        </button>
+                      </div>
+                      
+                      {insight.actionable && (
+                        <div className="mt-4 pt-4 border-t border-gray-200">
+                          <div className="flex space-x-3">
+                            <button className="flex-1 px-3 py-2 bg-white text-gray-700 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-50 transition-colors">
+                              Apply Suggestion
+                            </button>
+                            <button className="flex-1 px-3 py-2 bg-gray-600 text-white rounded-md text-sm font-medium hover:bg-gray-700 transition-colors">
+                              Learn More
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* AI Features Overview for Meta */}
+                <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6 mt-8">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">AI Assistant Features for Meta Ads</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="text-center">
+                      <div className="bg-blue-100 rounded-full p-3 w-12 h-12 mx-auto mb-3 flex items-center justify-center">
+                        <BoltIcon className="h-6 w-6 text-blue-600" />
+                      </div>
+                      <h4 className="font-medium text-gray-900">Campaign Optimization</h4>
+                      <p className="text-sm text-gray-600 mt-1">AI analyzes creative performance and placements</p>
+                    </div>
+                    
+                    <div className="text-center">
+                      <div className="bg-yellow-100 rounded-full p-3 w-12 h-12 mx-auto mb-3 flex items-center justify-center">
+                        <ExclamationTriangleIcon className="h-6 w-6 text-yellow-600" />
+                      </div>
+                      <h4 className="font-medium text-gray-900">Budget Alerts</h4>
+                      <p className="text-sm text-gray-600 mt-1">Monitor spending across Facebook and Instagram</p>
+                    </div>
+                    
+                    <div className="text-center">
+                      <div className="bg-green-100 rounded-full p-3 w-12 h-12 mx-auto mb-3 flex items-center justify-center">
+                        <LightBulbIcon className="h-6 w-6 text-green-600" />
+                      </div>
+                      <h4 className="font-medium text-gray-900">Audience Insights</h4>
+                      <p className="text-sm text-gray-600 mt-1">Discover high-performing audience segments</p>
+                    </div>
+                    
+                    <div className="text-center">
+                      <div className="bg-purple-100 rounded-full p-3 w-12 h-12 mx-auto mb-3 flex items-center justify-center">
+                        <SparklesIcon className="h-6 w-6 text-purple-600" />
+                      </div>
+                      <h4 className="font-medium text-gray-900">Smart Recommendations</h4>
+                      <p className="text-sm text-gray-600 mt-1">AI-powered suggestions for Meta campaigns</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick Actions for Meta */}
+                <div className="bg-white border border-gray-200 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick AI Actions</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <button className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors text-left">
+                      <div className="flex items-center mb-2">
+                        <BoltIcon className="h-5 w-5 text-blue-600 mr-2" />
+                        <span className="font-medium">Optimize Placements</span>
+                      </div>
+                      <p className="text-sm text-gray-600">Analyze performance across Facebook, Instagram, and Audience Network</p>
+                    </button>
+                    
+                    <button className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors text-left">
+                      <div className="flex items-center mb-2">
+                        <LightBulbIcon className="h-5 w-5 text-blue-600 mr-2" />
+                        <span className="font-medium">Audience Research</span>
+                      </div>
+                      <p className="text-sm text-gray-600">Find new audiences and create lookalikes</p>
+                    </button>
+                    
+                    <button className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors text-left">
+                      <div className="flex items-center mb-2">
+                        <ExclamationTriangleIcon className="h-5 w-5 text-blue-600 mr-2" />
+                        <span className="font-medium">Creative Analysis</span>
+                      </div>
+                      <p className="text-sm text-gray-600">Compare video vs image performance</p>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <SparklesIcon className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">AI Assistant Unavailable</h3>
+                <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                  Connect your Meta Ads account to access AI-powered campaign optimization, budget alerts, and audience recommendations.
+                </p>
+                <button
+                  onClick={handleConnect}
+                  className="inline-flex items-center px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                >
+                  <i className="fas fa-plug mr-2"></i>
+                  Connect Meta Ads Account
+                </button>
               </div>
             )}
           </Tab.Panel>

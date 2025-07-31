@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/lib/auth';
 import prisma from '@/app/lib/prisma';
+import { triggerWorkflows } from '@/app/lib/workflow-triggers';
 
 // GET - Get single contact with details and activities
 export async function GET(
@@ -230,6 +231,14 @@ export async function PUT(
           completedAt: new Date(),
         },
       });
+    }
+
+    // Trigger workflows for contact update
+    try {
+      await triggerWorkflows.contactUpdated(existingContact, updatedContact, user.tenantId, user.id);
+    } catch (workflowError) {
+      console.error('Error triggering workflows for contact update:', workflowError);
+      // Don't fail the contact update if workflow triggers fail
     }
 
     return NextResponse.json({ contact: updatedContact });

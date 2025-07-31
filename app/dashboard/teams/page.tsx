@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/app/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/app/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/app/components/ui/dialog";
 import { Input } from "@/app/components/ui/input";
 import { Label } from "@/app/components/ui/label";
 import { Textarea } from "@/app/components/ui/textarea";
@@ -243,82 +243,13 @@ export default function TeamsPage() {
               Manage Roles
             </Button>
           </Link>
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-                <PlusIcon className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
-                Create Team
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <div className="mx-auto mb-4 h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center">
-                  <UsersIcon className="h-6 w-6 text-blue-600" />
-                </div>
-                <DialogTitle className="text-center">Create New Team</DialogTitle>
-                <DialogDescription className="text-center">
-                  Teams help you organize members and manage permissions effectively
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name" className="text-sm font-medium">
-                    Team Name <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="e.g., Marketing Team"
-                    className="w-full"
-                    autoFocus
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="description" className="text-sm font-medium">
-                    Description
-                  </Label>
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Brief description of this team's purpose..."
-                    rows={3}
-                    className="w-full resize-none"
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setIsCreateDialogOpen(false);
-                    setFormData({ name: "", description: "" });
-                  }}
-                  disabled={creating}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  onClick={handleCreateTeam} 
-                  disabled={creating || !formData.name.trim()}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  {creating ? (
-                    <>
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Creating...
-                    </>
-                  ) : (
-                    "Create Team"
-                  )}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <Button 
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+            onClick={() => setIsCreateDialogOpen(true)}
+          >
+            <PlusIcon className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
+            Create Team
+          </Button>
         </div>
       </div>
 
@@ -514,6 +445,80 @@ export default function TeamsPage() {
             </div>
           ))}
         </div>
+      )}
+
+      {/* Create Team Dialog */}
+      {isCreateDialogOpen && (
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <div className="mx-auto mb-4 h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center">
+                <UsersIcon className="h-6 w-6 text-blue-600" />
+              </div>
+              <DialogTitle className="text-center">Create New Team</DialogTitle>
+              <DialogDescription className="text-center">
+                Teams help you organize members and manage permissions effectively
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="name" className="text-sm font-medium">
+                  Team Name <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="e.g., Marketing Team"
+                  className="w-full"
+                  autoFocus
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="description" className="text-sm font-medium">
+                  Description
+                </Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Brief description of this team's purpose..."
+                  rows={3}
+                  className="w-full resize-none"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsCreateDialogOpen(false);
+                  setFormData({ name: "", description: "" });
+                }}
+                disabled={creating}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleCreateTeam} 
+                disabled={creating || !formData.name.trim()}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {creating ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Creating...
+                  </>
+                ) : (
+                  "Create Team"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

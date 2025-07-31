@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/lib/auth';
 import prisma from '@/app/lib/prisma';
 import { checkPlanLimit } from '@/app/lib/plan-limits';
+import { triggerWorkflows } from '@/app/lib/workflow-triggers';
 
 export async function GET(req: NextRequest) {
   try {
@@ -154,6 +155,14 @@ export async function POST(req: NextRequest) {
         }
       }
     });
+
+    // Trigger workflows for company creation
+    try {
+      await triggerWorkflows.companyCreated(company, tenantId, (session.user as any)?.id);
+    } catch (workflowError) {
+      console.error('Error triggering workflows for company creation:', workflowError);
+      // Don't fail the company creation if workflow triggers fail
+    }
 
     return NextResponse.json({ company }, { status: 201 });
   } catch (error) {

@@ -17,6 +17,7 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import toast, { Toaster } from 'react-hot-toast';
 import Link from 'next/link';
 import ContactDetailsModal from '../components/ContactDetailsModal';
+import ContactSelectionModal from '../components/ContactSelectionModal';
 
 interface Contact {
   id: string;
@@ -60,6 +61,8 @@ export default function ContactKanban() {
   const [showStageSettings, setShowStageSettings] = useState(false);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showContactSelection, setShowContactSelection] = useState(false);
+  const [selectedStageForAddContact, setSelectedStageForAddContact] = useState<{id: string, name: string} | null>(null);
 
   useEffect(() => {
     loadPipeline();
@@ -189,6 +192,40 @@ export default function ContactKanban() {
       }));
       setPipeline(newPipeline);
     }
+  };
+
+  const handleAddContactToStage = (stageId: string, stageName: string) => {
+    setSelectedStageForAddContact({ id: stageId, name: stageName });
+    setShowContactSelection(true);
+  };
+
+  const handleContactsSelected = async (contactIds: string[]) => {
+    if (!selectedStageForAddContact || contactIds.length === 0) return;
+
+    try {
+      const response = await fetch('/api/contacts/add-to-stage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contactIds,
+          stageId: selectedStageForAddContact.id,
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        // Reload the pipeline to get updated data
+        await loadPipeline();
+        toast.success(`${contactIds.length} contact${contactIds.length !== 1 ? 's' : ''} added to ${selectedStageForAddContact.name}`);
+      } else {
+        toast.error('Failed to add contacts to stage');
+      }
+    } catch (error) {
+      console.error('Error adding contacts to stage:', error);
+      toast.error('Error adding contacts to stage');
+    }
+
+    setSelectedStageForAddContact(null);
   };
 
   if (isLoading) {
@@ -406,9 +443,7 @@ export default function ContactKanban() {
                       {/* Add Contact to Stage */}
                       <button
                         className="w-full p-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-gray-400 hover:text-gray-600 transition-colors"
-                        onClick={() => {
-                          // TODO: Open modal to add contact to this specific stage
-                        }}
+                        onClick={() => handleAddContactToStage(stage.id, stage.name)}
                       >
                         <PlusIcon className="h-5 w-5 mx-auto mb-1" />
                         <span className="text-sm">Add Contact</span>
@@ -432,6 +467,25 @@ export default function ContactKanban() {
             setSelectedContactId(null);
           }}
           onContactUpdated={handleContactUpdated}
+        />
+      )}
+
+      {/* Contact Selection Modal */}
+      {selectedStageForAddContact && (
+        <ContactSelectionModal
+          isOpen={showContactSelection}
+          onClose={() => {
+            setShowContactSelection(false);
+            setSelectedStageForAddContact(null);
+          }}
+          onContactsSelected={handleContactsSelected}
+          stageId={selectedStageForAddContact.id}
+          stageName={selectedStageForAddContact.name}
+          excludeContactIds={
+            pipeline?.stages
+              .find(stage => stage.id === selectedStageForAddContact.id)
+              ?.contacts.map(contact => contact.id) || []
+          }
         />
       )}
     </div>

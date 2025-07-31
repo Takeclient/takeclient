@@ -100,19 +100,35 @@ export function WhatsAppIntegrationModal({ isOpen, onClose, onSuccess }: WhatsAp
                     </Dialog.Title>
 
                     {/* Instructions */}
-                    <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-                      <div className="flex">
-                        <InformationCircleIcon className="h-5 w-5 text-blue-400 mt-0.5" />
-                        <div className="ml-3">
-                          <h4 className="text-sm font-medium text-blue-800">Setup Instructions</h4>
-                          <div className="mt-2 text-sm text-blue-700">
-                            <ol className="list-decimal list-inside space-y-1">
-                              <li>Go to Meta Business Manager → WhatsApp Manager</li>
-                              <li>Select your WhatsApp Business Account</li>
-                              <li>Navigate to Settings → API Setup</li>
-                              <li>Copy the required credentials below</li>
-                              <li>Generate a permanent access token</li>
-                            </ol>
+                    <div className="mb-6 space-y-4">
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div className="flex">
+                          <InformationCircleIcon className="h-5 w-5 text-blue-400 mt-0.5" />
+                          <div className="ml-3">
+                            <h4 className="text-sm font-medium text-blue-800">Quick Setup Guide</h4>
+                            <div className="mt-2 text-sm text-blue-700">
+                              <ol className="list-decimal list-inside space-y-1">
+                                <li>Go to <a href="https://business.facebook.com" target="_blank" rel="noopener noreferrer" className="underline hover:no-underline">Meta Business Manager</a> → WhatsApp Manager</li>
+                                <li>Select your WhatsApp Business Account</li>
+                                <li>Navigate to Settings → API Setup</li>
+                                <li>Copy your Phone Number ID and Business Account ID</li>
+                                <li>Generate a permanent access token (System Users → Create → Generate Token)</li>
+                              </ol>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                        <div className="flex">
+                          <InformationCircleIcon className="h-5 w-5 text-yellow-400 mt-0.5" />
+                          <div className="ml-3">
+                            <h4 className="text-sm font-medium text-yellow-800">Important Notes</h4>
+                            <div className="mt-2 text-sm text-yellow-700 space-y-1">
+                              <p>• Use a <strong>permanent access token</strong>, not temporary</p>
+                              <p>• Ensure your WhatsApp Business number is verified</p>
+                              <p>• Configure webhooks after adding this integration</p>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -158,6 +174,7 @@ export function WhatsAppIntegrationModal({ isOpen, onClose, onSuccess }: WhatsAp
                             className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-green-500 focus:border-green-500"
                             placeholder="1234567890123456"
                           />
+                          <p className="mt-1 text-xs text-gray-500">Found in API Setup → From phone number</p>
                         </div>
                       </div>
 
@@ -172,6 +189,7 @@ export function WhatsAppIntegrationModal({ isOpen, onClose, onSuccess }: WhatsAp
                           className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-green-500 focus:border-green-500"
                           placeholder="1234567890123456"
                         />
+                        <p className="mt-1 text-xs text-gray-500">Found in API Setup → Business info or URL bar</p>
                       </div>
 
                       <div>
@@ -186,7 +204,7 @@ export function WhatsAppIntegrationModal({ isOpen, onClose, onSuccess }: WhatsAp
                           placeholder="EAAxxxxxxxxx..."
                         />
                         <p className="mt-1 text-xs text-gray-500">
-                          Use a permanent token, not a temporary one
+                          <strong>Important:</strong> Generate a permanent token via System Users → Create System User → Generate Token. Temporary tokens expire and will break your integration.
                         </p>
                       </div>
 

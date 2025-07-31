@@ -144,6 +144,13 @@ export default function WorkflowsPage() {
           
           <div className="flex items-center space-x-3">
             <Link
+              href="/dashboard/workflows/executions"
+              className="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+            >
+              <ChartBarIcon className="h-5 w-5 mr-2" />
+              Executions
+            </Link>
+            <Link
               href="/dashboard/workflows/templates"
               className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
             >

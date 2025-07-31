@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/lib/auth';
 import { prisma } from '@/app/lib/prisma';
+import { triggerWorkflows } from '@/app/lib/workflow-triggers';
 
 export async function GET(
   req: NextRequest,
@@ -168,6 +169,14 @@ export async function PATCH(
         },
       },
     });
+
+    // Trigger workflows for deal update
+    try {
+      await triggerWorkflows.dealUpdated(existingDeal, updatedDeal, user.tenantId, user.id);
+    } catch (workflowError) {
+      console.error('Error triggering workflows for deal update:', workflowError);
+      // Don't fail the deal update if workflow triggers fail
+    }
 
     return NextResponse.json(updatedDeal);
   } catch (error) {

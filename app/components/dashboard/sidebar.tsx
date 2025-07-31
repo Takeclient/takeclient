@@ -108,6 +108,19 @@ export function Sidebar({ tenantName = 'Your Company' }: SidebarProps) {
         },
         { name: 'Form Builder', href: '/dashboard/form-builder', icon: 'fa-edit', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'MANAGER', 'MARKETER'] },
         { 
+          name: 'GMB', 
+          href: '/dashboard/marketing/gmb', 
+          icon: 'fa-map-marker-alt', 
+          roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'MANAGER', 'MARKETER'],
+          subItems: [
+            { name: 'Overview', href: '/dashboard/marketing/gmb/overview', icon: 'fa-chart-pie' },
+            { name: 'Reviews', href: '/dashboard/marketing/gmb/reviews', icon: 'fa-star' },
+            { name: 'Posts', href: '/dashboard/marketing/gmb/posts', icon: 'fa-bullhorn' },
+            { name: 'Insights', href: '/dashboard/marketing/gmb/insights', icon: 'fa-chart-line' },
+            { name: 'Settings', href: '/dashboard/marketing/gmb/settings', icon: 'fa-cog' },
+          ]
+        },
+        { 
           name: 'Email Marketing', 
           href: '/dashboard/email-marketing', 
           icon: 'fa-envelope', 
@@ -165,8 +178,21 @@ export function Sidebar({ tenantName = 'Your Company' }: SidebarProps) {
       ],
     },
     {
-      name: 'Automation',
+      name: 'AI Agents',
       icon: 'fa-robot',
+      items: [
+        { name: 'Agent Hub', href: '/dashboard/ai-agents', icon: 'fa-home' },
+        { name: 'Create Agent', href: '/dashboard/ai-agents/create', icon: 'fa-plus-circle' },
+        { name: 'Training', href: '/dashboard/ai-agents/training', icon: 'fa-graduation-cap' },
+        { name: 'Conversations', href: '/dashboard/ai-agents/conversations', icon: 'fa-comments' },
+        { name: 'Analytics', href: '/dashboard/ai-agents/analytics', icon: 'fa-chart-line' },
+        { name: 'Integrations', href: '/dashboard/ai-agents/integrations', icon: 'fa-plug' },
+        { name: 'Templates', href: '/dashboard/ai-agents/templates', icon: 'fa-file-alt' },
+      ],
+    },
+    {
+      name: 'Automation',
+      icon: 'fa-cogs',
       items: [
         { name: 'Workflows', href: '/dashboard/workflows', icon: 'fa-diagram-project' },
         { name: 'Email Automation', href: '/dashboard/email-automation', icon: 'fa-envelope-circle-check' },

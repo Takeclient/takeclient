@@ -113,7 +113,8 @@ export async function POST(req: NextRequest) {
     const planFeatures = tenant.plan.features as any;
     const maxTeams = planFeatures?.maxTeams || 1;
     
-    if (tenant._count.teams >= maxTeams) {
+    // Only check limits if maxTeams is not -1 (unlimited)
+    if (maxTeams !== -1 && tenant._count.teams >= maxTeams) {
       return NextResponse.json(
         { error: `Your plan allows only ${maxTeams} team(s). Please upgrade to create more teams.` },
         { status: 400 }

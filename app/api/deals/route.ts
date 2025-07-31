@@ -4,6 +4,7 @@ import { authOptions } from '@/app/lib/auth';
 import prisma from '@/app/lib/prisma';
 import { DealStage } from '@prisma/client';
 import { checkPlanLimit } from '@/app/lib/plan-limits';
+import { triggerWorkflows } from '@/app/lib/workflow-triggers';
 
 export async function GET(req: NextRequest) {
   try {
@@ -178,6 +179,14 @@ export async function POST(req: NextRequest) {
         }
       }
     });
+
+    // Trigger workflows for deal creation
+    try {
+      await triggerWorkflows.dealCreated(deal, tenantId, (session.user as any)?.id);
+    } catch (workflowError) {
+      console.error('Error triggering workflows for deal creation:', workflowError);
+      // Don't fail the deal creation if workflow triggers fail
+    }
 
     return NextResponse.json({ deal }, { status: 201 });
   } catch (error) {

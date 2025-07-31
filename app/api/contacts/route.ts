@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/lib/auth';
 import prisma from '@/app/lib/prisma';
 import { checkPlanLimit } from '@/app/lib/plan-limits';
+import { triggerWorkflows } from '@/app/lib/workflow-triggers';
 
 export async function GET(req: NextRequest) {
   try {
@@ -23,6 +24,7 @@ export async function GET(req: NextRequest) {
     const skip = (page - 1) * limit;
     const search = searchParams.get('search') || '';
     const status = searchParams.get('status') || '';
+    const source = searchParams.get('source') || '';
     
     // Build where clause
     const where: any = {
@@ -43,6 +45,11 @@ export async function GET(req: NextRequest) {
     // Apply status filter
     if (status && status !== 'ALL') {
       where.status = status;
+    }
+    
+    // Apply source filter
+    if (source && source !== 'ALL') {
+      where.source = source;
     }
     
     // Get total count
@@ -159,6 +166,14 @@ export async function POST(req: NextRequest) {
         }
       }
     });
+
+    // Trigger workflows for contact creation
+    try {
+      await triggerWorkflows.contactCreated(contact, tenantId, (session.user as any)?.id);
+    } catch (workflowError) {
+      console.error('Error triggering workflows for contact creation:', workflowError);
+      // Don't fail the contact creation if workflow triggers fail
+    }
 
     return NextResponse.json({ contact }, { status: 201 });
   } catch (error) {

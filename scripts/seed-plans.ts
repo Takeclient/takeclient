@@ -24,6 +24,7 @@ async function seedPlans() {
           support: 'Email',
           automations: 0,
           integrations: 1,
+          maxTeams: 1,
         },
         isActive: true,
         sortOrder: 0,
@@ -45,6 +46,7 @@ async function seedPlans() {
           support: 'Email + Chat',
           automations: 10,
           integrations: 5,
+          maxTeams: 5,
         },
         isActive: true,
         sortOrder: 1,
@@ -66,6 +68,7 @@ async function seedPlans() {
           support: 'Priority Support',
           automations: 50,
           integrations: 15,
+          maxTeams: 20,
         },
         isActive: true,
         sortOrder: 2,
@@ -87,6 +90,7 @@ async function seedPlans() {
           support: '24/7 Phone + Dedicated Manager',
           automations: -1, // Unlimited
           integrations: -1, // Unlimited
+          maxTeams: -1, // Unlimited
         },
         isActive: true,
         sortOrder: 3,

@@ -25,9 +25,10 @@ interface IntegrationsListProps {
   integrations: Integration[];
   onRefresh: () => void;
   onEdit: (integration: Integration) => void;
+  onSync?: (integrationId: string) => void;
 }
 
-export function IntegrationsList({ integrations, onRefresh, onEdit }: IntegrationsListProps) {
+export function IntegrationsList({ integrations, onRefresh, onEdit, onSync }: IntegrationsListProps) {
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this integration?')) {
       return;
@@ -126,6 +127,15 @@ export function IntegrationsList({ integrations, onRefresh, onEdit }: Integratio
             </div>
 
             <div className="flex items-center space-x-2">
+              {onSync && integration.isActive && (
+                <button
+                  onClick={() => onSync(integration.id)}
+                  className="p-2 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-md"
+                  title="Sync Now"
+                >
+                  <ArrowPathIcon className="h-5 w-5" />
+                </button>
+              )}
               <button
                 onClick={() => handleToggleStatus(integration.id, integration.isActive)}
                 className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md"

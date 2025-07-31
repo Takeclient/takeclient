@@ -16,6 +16,8 @@ import ReactFlow, {
   Panel,
   Handle,
   Position,
+  useReactFlow,
+  ReactFlowProvider,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import {
@@ -29,12 +31,16 @@ import {
   XMarkIcon,
   Square2StackIcon,
   CheckIcon,
+  DocumentDuplicateIcon,
+  SparklesIcon,
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
+import { enhancedTriggers, enhancedActions, workflowTemplates } from '@/app/lib/workflow-templates';
+import { getNodeConfig } from '@/app/lib/workflow-node-configs';
 
 // Inline Node Components to avoid import issues
 const TriggerNode = ({ data }: any) => (
-  <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg shadow-lg border-2 border-purple-400 min-w-[200px]">
+  <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg shadow-lg border-2 border-purple-400 min-w-[180px] max-w-[220px]">
     <div className="p-4">
       <div className="flex items-center mb-2">
         <span className="text-2xl mr-3">{data.icon}</span>
@@ -64,7 +70,7 @@ const ActionNode = ({ data }: any) => {
   
   return (
     <div 
-      className="bg-white rounded-lg shadow-lg border-2 min-w-[200px] hover:shadow-xl transition-shadow"
+      className="bg-white rounded-lg shadow-lg border-2 min-w-[180px] max-w-[220px] hover:shadow-xl transition-shadow"
       style={{ borderColor }}
     >
       <Handle
@@ -103,7 +109,7 @@ const ActionNode = ({ data }: any) => {
 };
 
 const ConditionNode = ({ data }: any) => (
-  <div className="bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-lg shadow-lg border-2 border-pink-400 min-w-[200px]">
+  <div className="bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-lg shadow-lg border-2 border-pink-400 min-w-[180px] max-w-[220px]">
     <Handle
       type="target"
       position={Position.Top}
@@ -150,7 +156,7 @@ const ConditionNode = ({ data }: any) => (
 );
 
 const DelayNode = ({ data }: any) => (
-  <div className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-lg shadow-lg border-2 border-yellow-400 min-w-[200px]">
+  <div className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-lg shadow-lg border-2 border-yellow-400 min-w-[180px] max-w-[220px]">
     <Handle
       type="target"
       position={Position.Top}
@@ -190,6 +196,7 @@ interface WorkflowNodeData {
   description?: string;
   config: any;
   category?: string;
+  color?: string;
 }
 
 const nodeTypes = {
@@ -201,99 +208,64 @@ const nodeTypes = {
 
 const triggerOptions = [
   {
-    category: 'Contacts',
-    triggers: [
-      { value: 'CONTACT_CREATED', label: 'Contact Created', icon: '👤', description: 'When a new contact is added' },
-      { value: 'CONTACT_UPDATED', label: 'Contact Updated', icon: '✏️', description: 'When contact details are changed' },
-      { value: 'CONTACT_STAGE_CHANGED', label: 'Stage Changed', icon: '🔄', description: 'When contact moves to a new stage' },
-      { value: 'CONTACT_TAG_ADDED', label: 'Tag Added', icon: '🏷️', description: 'When a tag is added to contact' },
-      { value: 'CONTACT_SCORE_CHANGED', label: 'Score Changed', icon: '📊', description: 'When lead score changes' },
-    ]
+    category: 'CRM',
+    triggers: enhancedTriggers.CRM,
   },
   {
-    category: 'Deals',
-    triggers: [
-      { value: 'DEAL_CREATED', label: 'Deal Created', icon: '💰', description: 'When a new deal is created' },
-      { value: 'DEAL_STAGE_CHANGED', label: 'Stage Changed', icon: '📈', description: 'When deal moves stages' },
-      { value: 'DEAL_WON', label: 'Deal Won', icon: '🎉', description: 'When a deal is marked as won' },
-      { value: 'DEAL_LOST', label: 'Deal Lost', icon: '😔', description: 'When a deal is marked as lost' },
-    ]
+    category: 'Marketing',
+    triggers: enhancedTriggers.Marketing,
   },
   {
-    category: 'Forms & Email',
-    triggers: [
-      { value: 'FORM_SUBMITTED', label: 'Form Submitted', icon: '📝', description: 'When someone submits a form' },
-      { value: 'EMAIL_OPENED', label: 'Email Opened', icon: '📧', description: 'When an email is opened' },
-      { value: 'EMAIL_CLICKED', label: 'Link Clicked', icon: '🔗', description: 'When a link is clicked' },
-      { value: 'EMAIL_UNSUBSCRIBED', label: 'Unsubscribed', icon: '🚫', description: 'When someone unsubscribes' },
-    ]
+    category: 'Sales',
+    triggers: enhancedTriggers.Sales,
   },
   {
-    category: 'WhatsApp',
-    triggers: [
-      { value: 'WHATSAPP_MESSAGE_RECEIVED', label: 'Message Received', icon: '💬', description: 'When you receive a WhatsApp message' },
-      { value: 'WHATSAPP_CONVERSATION_STARTED', label: 'Conversation Started', icon: '🗨️', description: 'When a new conversation begins' },
-    ]
+    category: 'Ecommerce',
+    triggers: enhancedTriggers.Ecommerce,
   },
-  {
-    category: 'Time-Based',
-    triggers: [
-      { value: 'TIME_BASED', label: 'Specific Date/Time', icon: '⏰', description: 'Run at a specific time' },
-      { value: 'RECURRING', label: 'Recurring Schedule', icon: '🔁', description: 'Run on a schedule' },
-    ]
-  }
 ];
 
 const actionOptions = [
   {
-    category: 'Contact Actions',
-    actions: [
-      { value: 'UPDATE_CONTACT', label: 'Update Contact', icon: '✏️', description: 'Update contact information', color: '#3B82F6', category: 'Contact Actions' },
-      { value: 'UPDATE_CONTACT_STAGE', label: 'Change Stage', icon: '🔄', description: 'Move contact to new stage', color: '#8B5CF6', category: 'Contact Actions' },
-      { value: 'ADD_CONTACT_TAG', label: 'Add Tag', icon: '🏷️', description: 'Add a tag to contact', color: '#10B981', category: 'Contact Actions' },
-      { value: 'UPDATE_CONTACT_SCORE', label: 'Update Score', icon: '📊', description: 'Increase or decrease score', color: '#F59E0B', category: 'Contact Actions' },
-      { value: 'ASSIGN_CONTACT', label: 'Assign Contact', icon: '👥', description: 'Assign contact to team member', color: '#EF4444', category: 'Contact Actions' },
-    ]
-  },
-  {
-    category: 'Communication',
-    actions: [
-      { value: 'SEND_EMAIL', label: 'Send Email', icon: '📧', description: 'Send an email to contact', color: '#3B82F6', category: 'Communication' },
-      { value: 'SEND_WHATSAPP', label: 'Send WhatsApp', icon: '💬', description: 'Send WhatsApp message', color: '#10B981', category: 'Communication' },
-      { value: 'SEND_NOTIFICATION', label: 'Send Notification', icon: '🔔', description: 'Notify team members', color: '#F59E0B', category: 'Communication' },
-    ]
-  },
-  {
     category: 'CRM Actions',
-    actions: [
-      { value: 'CREATE_DEAL', label: 'Create Deal', icon: '💰', description: 'Create a new deal', color: '#8B5CF6', category: 'CRM Actions' },
-      { value: 'CREATE_TASK', label: 'Create Task', icon: '✅', description: 'Create a task for team', color: '#06B6D4', category: 'CRM Actions' },
-      { value: 'CREATE_ACTIVITY', label: 'Log Activity', icon: '📝', description: 'Log an activity', color: '#84CC16', category: 'CRM Actions' },
-    ]
+    actions: enhancedActions.CRM.map(a => ({ ...a, category: 'CRM Actions' })),
+  },
+  {
+    category: 'Marketing',
+    actions: enhancedActions.Marketing.map(a => ({ ...a, category: 'Marketing' })),
+  },
+  {
+    category: 'Sales',
+    actions: enhancedActions.Sales.map(a => ({ ...a, category: 'Sales' })),
+  },
+  {
+    category: 'Ecommerce',
+    actions: enhancedActions.Ecommerce.map(a => ({ ...a, category: 'Ecommerce' })),
   },
   {
     category: 'Control Flow',
-    actions: [
-      { value: 'WAIT', label: 'Wait/Delay', icon: '⏱️', description: 'Wait before next action', color: '#6B7280', category: 'Control Flow' },
-      { value: 'BRANCH_CONDITION', label: 'If/Then Branch', icon: '🔀', description: 'Conditional branching', color: '#EC4899', category: 'Control Flow' },
-    ]
-  }
+    actions: enhancedActions.ControlFlow.map(a => ({ ...a, category: 'Control Flow' })),
+  },
 ];
 
 const initialNodes: Node[] = [];
 const initialEdges: Edge[] = [];
 
-export default function NewWorkflowPage() {
+function WorkflowBuilder() {
   const router = useRouter();
+  const { getViewport, setCenter, fitView, project } = useReactFlow();
   const [workflowName, setWorkflowName] = useState('');
   const [workflowDescription, setWorkflowDescription] = useState('');
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [activeTab, setActiveTab] = useState<'triggers' | 'actions'>('triggers');
+  const [activeTab, setActiveTab] = useState<'triggers' | 'actions' | 'templates'>('templates');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
 
   // Cleanup effect to prevent memory leaks
   useEffect(() => {
@@ -303,6 +275,24 @@ export default function NewWorkflowPage() {
       setIsSubmitting(false);
     };
   }, []);
+
+  // Handle ReactFlow initialization to prevent auto-scrolling
+  const handleInit = useCallback((reactFlowInstance: any) => {
+    // Set initial viewport to center on components (offset to show x:400 as center)
+    reactFlowInstance.setViewport({ x: -200, y: 200, zoom: 1 });
+  }, []);
+
+  // Helper function to get a simple position
+  const getNodePosition = useCallback(() => {
+    // Count existing nodes to position new ones
+    const nodeCount = nodes.length;
+    
+    // Position nodes centered in visible area
+    return {
+      x: 400, // Center horizontally in viewport
+      y: 150 + (nodeCount * 150), // Stack vertically from top of visible area
+    };
+  }, [nodes]);
 
   // Helper function to auto-arrange nodes vertically
   const autoArrangeNodes = useCallback((newNodes: Node[]) => {
@@ -320,7 +310,7 @@ export default function NewWorkflowPage() {
     if (triggerNode) {
       arrangedNodes.forEach(node => {
         if (node.id === triggerNode.id) {
-          node.position = { x: 400, y: 50 };
+          node.position = { x: 400, y: 100 };
         }
       });
     }
@@ -331,7 +321,7 @@ export default function NewWorkflowPage() {
       if (nodeInArray) {
         nodeInArray.position = { 
           x: 400, 
-          y: 250 + (index * 150) // Start after trigger with more space
+          y: 250 + (index * 150) // Start after trigger with consistent spacing
         };
       }
     });
@@ -350,10 +340,14 @@ export default function NewWorkflowPage() {
 
   const addTriggerNode = useCallback((trigger: any) => {
     const id = `trigger-${Date.now()}`;
+    
+    // Position trigger node at top center of visible area
+    const position = { x: 400, y: 100 }; // Center horizontally in viewport, at top of visible area
+    
     const newNode: Node = {
       id,
       type: 'trigger',
-      position: { x: 400, y: 50 }, // Fixed position for trigger
+      position,
       data: {
         id,
         type: trigger.value,
@@ -368,17 +362,22 @@ export default function NewWorkflowPage() {
       // Remove existing trigger node if any
       const withoutTrigger = nds.filter(n => n.type !== 'trigger');
       const newNodes = [...withoutTrigger, newNode];
-      return autoArrangeNodes(newNodes);
+      
+      // No automatic fitView - keep components visible where placed
+      return newNodes;
     });
-  }, [setNodes, autoArrangeNodes]);
+  }, [setNodes, fitView]);
 
   const addActionNode = useCallback((action: any) => {
     const id = `action-${Date.now()}`;
     
+    // Position action node
+    const position = getNodePosition(); // Stack below existing nodes
+    
     const newNode: Node = {
       id,
       type: action.value === 'WAIT' ? 'delay' : action.value === 'BRANCH_CONDITION' ? 'condition' : 'action',
-      position: { x: 400, y: 250 }, // Temporary position, will be arranged
+      position,
       data: {
         id,
         type: action.value,
@@ -393,9 +392,11 @@ export default function NewWorkflowPage() {
 
     setNodes((nds) => {
       const newNodes = [...nds, newNode];
-      return autoArrangeNodes(newNodes);
+      
+      // No automatic fitView - keep components visible where placed
+      return newNodes;
     });
-  }, [setNodes, autoArrangeNodes]);
+  }, [setNodes, getNodePosition, fitView]);
 
   const deleteNode = useCallback((nodeId: string) => {
     setNodes((nds) => {
@@ -538,6 +539,111 @@ export default function NewWorkflowPage() {
     }
   };
 
+  const loadTemplate = useCallback((template: any) => {
+    // Clear existing nodes
+    setNodes([]);
+    setEdges([]);
+    
+    // Set workflow details
+    setWorkflowName(template.name);
+    setWorkflowDescription(template.description);
+    
+    const newNodes: Node[] = [];
+    const newEdges: Edge[] = [];
+    
+    // Add trigger node
+    const triggerData = enhancedTriggers[template.category as keyof typeof enhancedTriggers]
+      ?.find(t => t.value === template.triggerType) || 
+      Object.values(enhancedTriggers).flat().find(t => t.value === template.triggerType);
+    
+    if (triggerData) {
+      const triggerId = `trigger-${Date.now()}`;
+      newNodes.push({
+        id: triggerId,
+        type: 'trigger',
+        position: { x: 400, y: 100 },
+        data: {
+          id: triggerId,
+          type: template.triggerType,
+          label: triggerData.label,
+          icon: triggerData.icon,
+          description: triggerData.description,
+          config: template.triggerConfig,
+        },
+      });
+      
+      // Add action nodes
+      let previousNodeId = triggerId;
+      template.actions.forEach((action: any, index: number) => {
+        const actionData = Object.values(enhancedActions).flat()
+          .find(a => a.value === action.type);
+        
+        if (actionData) {
+          const actionId = `action-${Date.now()}-${index}`;
+          const nodeType = action.type === 'WAIT' ? 'delay' : 
+                          action.type === 'BRANCH_CONDITION' ? 'condition' : 'action';
+          
+          newNodes.push({
+            id: actionId,
+            type: nodeType,
+            position: { x: 400, y: 250 + (index * 150) },
+            data: {
+              id: actionId,
+              type: action.type,
+              label: actionData.label,
+              icon: actionData.icon,
+              description: actionData.description,
+              config: action.config,
+              color: actionData.color,
+              category: actionData.category,
+            },
+          });
+          
+          // Create edge
+          newEdges.push({
+            id: `edge-${previousNodeId}-${actionId}`,
+            source: previousNodeId,
+            target: actionId,
+          });
+          
+          previousNodeId = actionId;
+        }
+      });
+    }
+    
+    setNodes(newNodes);
+    setEdges(newEdges);
+    setShowTemplateModal(false);
+    setActiveTab('triggers');
+    
+    // Only fit view for templates if there are multiple nodes
+    if (newNodes.length > 1) {
+      setTimeout(() => {
+        fitView({ padding: 0.15, duration: 500, maxZoom: 1.2 });
+      }, 500);
+    }
+    
+    toast.success('Template loaded successfully!');
+  }, [setNodes, setEdges]);
+
+  const filteredTemplates = useMemo(() => {
+    if (selectedCategory === 'all') return workflowTemplates;
+    return workflowTemplates.filter(t => t.category === selectedCategory);
+  }, [selectedCategory]);
+
+  // Check for template parameter on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const templateId = params.get('template');
+    
+    if (templateId) {
+      const template = workflowTemplates.find(t => t.id === templateId);
+      if (template) {
+        loadTemplate(template);
+      }
+    }
+  }, [loadTemplate]);
+
   return (
     <div className="h-screen flex flex-col">
       {/* Header */}
@@ -603,46 +709,117 @@ export default function NewWorkflowPage() {
       </div>
 
       <div className="flex-1 flex">
-        {/* Sidebar */}
+        {/* Enhanced Sidebar */}
         {sidebarOpen && (
           <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
-            {/* Sidebar Header */}
-            <div className="p-4 border-b border-gray-200">
-              <div className="flex space-x-1 mb-4">
+            <div className="border-b border-gray-200">
+              <div className="flex p-2 space-x-1">
                 <button
-                  onClick={() => setActiveTab('triggers')}
-                  className={`flex-1 py-2 px-3 text-sm font-medium rounded-lg ${
-                    activeTab === 'triggers'
+                  onClick={() => setActiveTab('templates')}
+                  className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                    activeTab === 'templates'
                       ? 'bg-purple-100 text-purple-700'
-                      : 'text-gray-600 hover:text-gray-900'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                   }`}
                 >
-                  ⚡ Triggers
+                  <DocumentDuplicateIcon className="h-4 w-4 inline mr-1" />
+                  Templates
+                </button>
+                <button
+                  onClick={() => setActiveTab('triggers')}
+                  className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                    activeTab === 'triggers'
+                      ? 'bg-purple-100 text-purple-700'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                  }`}
+                >
+                  <BoltIcon className="h-4 w-4 inline mr-1" />
+                  Triggers
                 </button>
                 <button
                   onClick={() => setActiveTab('actions')}
-                  className={`flex-1 py-2 px-3 text-sm font-medium rounded-lg ${
+                  className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
                     activeTab === 'actions'
                       ? 'bg-purple-100 text-purple-700'
-                      : 'text-gray-600 hover:text-gray-900'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                   }`}
                 >
-                  🎯 Actions
+                  <CogIcon className="h-4 w-4 inline mr-1" />
+                  Actions
                 </button>
               </div>
             </div>
 
-            {/* Sidebar Content */}
             <div className="flex-1 overflow-y-auto p-4">
-              {activeTab === 'triggers' ? (
+              {activeTab === 'templates' ? (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-medium text-gray-900">
+                      Workflow Templates
+                    </h3>
+                    <select
+                      value={selectedCategory}
+                      onChange={(e) => setSelectedCategory(e.target.value)}
+                      className="text-xs border border-gray-300 rounded px-2 py-1"
+                    >
+                      <option value="all">All Categories</option>
+                      <option value="CRM">CRM</option>
+                      <option value="Marketing">Marketing</option>
+                      <option value="Sales">Sales</option>
+                      <option value="Ecommerce">Ecommerce</option>
+                    </select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    {filteredTemplates.map((template) => (
+                      <div
+                        key={template.id}
+                        onClick={() => {
+                          setSelectedTemplate(template);
+                          setShowTemplateModal(true);
+                        }}
+                        className="p-3 border border-gray-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 cursor-pointer transition-all"
+                      >
+                        <div className="flex items-start">
+                          <span className="text-2xl mr-3">{template.icon}</span>
+                          <div className="flex-1">
+                            <div className="flex items-center">
+                              <h4 className="font-medium text-sm text-gray-900">
+                                {template.name}
+                              </h4>
+                              {template.isPremium && (
+                                <SparklesIcon className="h-4 w-4 text-yellow-500 ml-2" />
+                              )}
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {template.description}
+                            </p>
+                            <div className="flex items-center mt-2 space-x-2">
+                              <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded">
+                                {template.category}
+                              </span>
+                              <span className="text-xs text-gray-400">
+                                {template.actions.length} steps
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : activeTab === 'triggers' ? (
                 <div className="space-y-4">
                   <h3 className="text-sm font-medium text-gray-900 mb-3">
                     Choose a trigger to start your workflow
                   </h3>
                   {triggerOptions.map((category) => (
                     <div key={category.category} className="space-y-2">
-                      <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider flex items-center">
                         {category.category}
+                        <span className="ml-2 text-xs bg-gray-100 px-2 py-0.5 rounded">
+                          {category.triggers.length}
+                        </span>
                       </h4>
                       {category.triggers.map((trigger) => (
                         <button
@@ -667,8 +844,11 @@ export default function NewWorkflowPage() {
                   </h3>
                   {actionOptions.map((category) => (
                     <div key={category.category} className="space-y-2">
-                      <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider flex items-center">
                         {category.category}
+                        <span className="ml-2 text-xs bg-gray-100 px-2 py-0.5 rounded">
+                          {category.actions.length}
+                        </span>
                       </h4>
                       {category.actions.map((action) => (
                         <button
@@ -704,10 +884,12 @@ export default function NewWorkflowPage() {
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
             onNodeClick={onNodeClick}
+            onInit={handleInit}
             nodeTypes={nodeTypes}
             connectionMode={ConnectionMode.Loose}
-            fitView
+            defaultViewport={{ x: -200, y: 200, zoom: 1 }}
             className="bg-gray-50"
+            preventScrolling={false}
           >
             <Controls />
             <MiniMap />
@@ -722,11 +904,14 @@ export default function NewWorkflowPage() {
                     Start Building Your Workflow
                   </h3>
                   <p className="text-sm text-gray-600 mb-4">
-                    Add a trigger from the sidebar to begin creating your automated workflow.
+                    Choose from pre-built templates or add a trigger from the sidebar to begin creating your automated workflow.
                   </p>
-                  <div className="text-xs text-gray-500">
-                    💡 Tip: Drag elements from the sidebar to create powerful automations
-                  </div>
+                  <button
+                    onClick={() => setActiveTab('templates')}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm"
+                  >
+                    Browse Templates
+                  </button>
                 </div>
               </Panel>
             )}
@@ -743,7 +928,111 @@ export default function NewWorkflowPage() {
           />
         )}
       </div>
+
+      {/* Template Preview Modal */}
+      {showTemplateModal && selectedTemplate && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-hidden">
+            <div className="p-6 border-b">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h2 className="text-xl font-bold flex items-center">
+                    <span className="text-2xl mr-3">{selectedTemplate.icon}</span>
+                    {selectedTemplate.name}
+                  </h2>
+                  <p className="text-gray-600 mt-1">{selectedTemplate.description}</p>
+                </div>
+                <button
+                  onClick={() => setShowTemplateModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <XMarkIcon className="h-6 w-6" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6 overflow-y-auto max-h-[60vh]">
+              <div className="space-y-4">
+                <div>
+                  <h3 className="font-medium text-gray-900 mb-2">Workflow Steps</h3>
+                  <div className="space-y-2">
+                    <div className="flex items-center p-3 bg-purple-50 rounded-lg">
+                      <BoltIcon className="h-5 w-5 text-purple-600 mr-3" />
+                      <div>
+                        <p className="font-medium text-sm">Trigger: {selectedTemplate.triggerType}</p>
+                        <p className="text-xs text-gray-600">Starts when this event occurs</p>
+                      </div>
+                    </div>
+                    {selectedTemplate.actions.map((action: any, index: number) => (
+                      <div key={index} className="flex items-center p-3 bg-gray-50 rounded-lg">
+                        <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center mr-3">
+                          <span className="text-xs font-medium">{index + 1}</span>
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">{action.name}</p>
+                          <p className="text-xs text-gray-600">{action.type}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                {selectedTemplate.benefits && (
+                  <div>
+                    <h3 className="font-medium text-gray-900 mb-2">Benefits</h3>
+                    <ul className="space-y-1">
+                      {selectedTemplate.benefits.map((benefit: string, index: number) => (
+                        <li key={index} className="flex items-start text-sm text-gray-600">
+                          <CheckIcon className="h-4 w-4 text-green-500 mr-2 mt-0.5" />
+                          {benefit}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                
+                <div className="flex items-center justify-between text-sm text-gray-500">
+                  <span>Estimated time: {selectedTemplate.estimatedTime}</span>
+                  <div className="flex gap-2">
+                    {selectedTemplate.tags.map((tag: string) => (
+                      <span key={tag} className="px-2 py-1 bg-gray-100 rounded text-xs">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="p-6 border-t bg-gray-50">
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => setShowTemplateModal(false)}
+                  className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => loadTemplate(selectedTemplate)}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                >
+                  Use This Template
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+// Main component with ReactFlow provider
+export default function NewWorkflowPage() {
+  return (
+    <ReactFlowProvider>
+      <WorkflowBuilder />
+    </ReactFlowProvider>
   );
 }
 
@@ -768,191 +1057,7 @@ function NodeConfigurationPanel({
   };
 
   const renderConfigForm = () => {
-    switch (node.data.type) {
-      case 'SEND_EMAIL':
-        return (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email Template
-              </label>
-              <select
-                value={config.templateId || ''}
-                onChange={(e) => handleConfigChange('templateId', e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-              >
-                <option value="">Select template...</option>
-                <option value="welcome">Welcome Email</option>
-                <option value="followup">Follow-up Email</option>
-                <option value="newsletter">Newsletter</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Subject Line
-              </label>
-              <input
-                type="text"
-                value={config.subject || ''}
-                onChange={(e) => handleConfigChange('subject', e.target.value)}
-                placeholder="Email subject..."
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Delay Before Sending
-              </label>
-              <div className="flex space-x-2">
-                <input
-                  type="number"
-                  value={config.delay || ''}
-                  onChange={(e) => handleConfigChange('delay', e.target.value)}
-                  placeholder="0"
-                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                />
-                <select
-                  value={config.delayUnit || 'minutes'}
-                  onChange={(e) => handleConfigChange('delayUnit', e.target.value)}
-                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                >
-                  <option value="minutes">Minutes</option>
-                  <option value="hours">Hours</option>
-                  <option value="days">Days</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        );
-
-      case 'WAIT':
-        return (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Wait Duration
-              </label>
-              <div className="flex space-x-2">
-                <input
-                  type="number"
-                  value={config.delay || ''}
-                  onChange={(e) => handleConfigChange('delay', e.target.value)}
-                  placeholder="Enter duration..."
-                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                />
-                <select
-                  value={config.unit || 'minutes'}
-                  onChange={(e) => handleConfigChange('unit', e.target.value)}
-                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                >
-                  <option value="minutes">Minutes</option>
-                  <option value="hours">Hours</option>
-                  <option value="days">Days</option>
-                  <option value="weeks">Weeks</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        );
-
-      case 'UPDATE_CONTACT_STAGE':
-        return (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                New Stage
-              </label>
-              <select
-                value={config.stageId || ''}
-                onChange={(e) => handleConfigChange('stageId', e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-              >
-                <option value="">Select stage...</option>
-                <option value="lead">Lead</option>
-                <option value="prospect">Prospect</option>
-                <option value="customer">Customer</option>
-                <option value="closed">Closed</option>
-              </select>
-            </div>
-          </div>
-        );
-
-      case 'ADD_CONTACT_TAG':
-        return (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tag to Add
-              </label>
-              <input
-                type="text"
-                value={config.tag || ''}
-                onChange={(e) => handleConfigChange('tag', e.target.value)}
-                placeholder="Enter tag name..."
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-              />
-            </div>
-          </div>
-        );
-
-      case 'BRANCH_CONDITION':
-        return (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Condition Field
-              </label>
-              <select
-                value={config.field || ''}
-                onChange={(e) => handleConfigChange('field', e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-              >
-                <option value="">Select field...</option>
-                <option value="score">Lead Score</option>
-                <option value="stage">Contact Stage</option>
-                <option value="tags">Tags</option>
-                <option value="email">Email</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Operator
-              </label>
-              <select
-                value={config.operator || ''}
-                onChange={(e) => handleConfigChange('operator', e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-              >
-                <option value="">Select operator...</option>
-                <option value="equals">Equals</option>
-                <option value="not_equals">Not Equals</option>
-                <option value="greater_than">Greater Than</option>
-                <option value="less_than">Less Than</option>
-                <option value="contains">Contains</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Value
-              </label>
-              <input
-                type="text"
-                value={config.value || ''}
-                onChange={(e) => handleConfigChange('value', e.target.value)}
-                placeholder="Enter comparison value..."
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-              />
-            </div>
-          </div>
-        );
-
-      default:
-        return (
-          <div className="text-sm text-gray-500">
-            Configuration options for this action will be available soon.
-          </div>
-        );
-    }
+    return getNodeConfig(node.data.type, node.data, handleConfigChange);
   };
 
   return (
