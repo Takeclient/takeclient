@@ -43,3 +43,28 @@ next-env.d.ts
 COMPLETE_SETUP_GUIDE.md
 QUICK_START.md
 scripts/setup-env.js
+
+# API Keys and Sensitive Files
+apis.md
+*.key
+*.p12
+config/secrets.json
+
+# Backend Python
+backend/venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/.env
+backend/app/__pycache__/
+backend/app/**/__pycache__/
+
+# Logs
+logs/
+*.log
+
+# Database
+*.db
+*.sqlite
+
+# Deployment sensitive files
+deployment/secrets/
