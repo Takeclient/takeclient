@@ -33,64 +33,26 @@ export default function CompaniesPage() {
     const fetchCompanies = async () => {
       try {
         setIsLoading(true);
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // Mock data
-        const mockCompanies = [
-          {
-            id: '1',
-            name: 'Acme Inc.',
-            industry: 'Software',
-            website: 'https://acme.example.com',
-            size: '50-100',
-            contactCount: 8,
-            dealCount: 3,
-            createdAt: '2023-01-10T09:00:00Z',
-          },
-          {
-            id: '2',
-            name: 'Tech Co.',
-            industry: 'Technology',
-            website: 'https://techco.example.com',
-            size: '10-50',
-            contactCount: 4,
-            dealCount: 1,
-            createdAt: '2023-02-15T14:30:00Z',
-          },
-          {
-            id: '3',
-            name: 'Global Ltd.',
-            industry: 'Consulting',
-            website: 'https://globalltd.example.com',
-            size: '100-500',
-            contactCount: 12,
-            dealCount: 5,
-            createdAt: '2023-03-20T11:45:00Z',
-          },
-          {
-            id: '4',
-            name: 'Startup Inc.',
-            industry: 'Finance',
-            website: null,
-            size: '1-10',
-            contactCount: 2,
-            dealCount: 0,
-            createdAt: '2023-04-25T16:15:00Z',
-          },
-          {
-            id: '5',
-            name: 'Enterprise Co.',
-            industry: 'Manufacturing',
-            website: 'https://enterprise.example.com',
-            size: '500+',
-            contactCount: 20,
-            dealCount: 7,
-            createdAt: '2023-05-30T10:20:00Z',
-          },
-        ];
-        
-        setCompanies(mockCompanies);
+        // Fetch real companies from API
+        const response = await fetch('/api/companies');
+        if (response.ok) {
+          const data = await response.json();
+          // Map API response to match component interface
+          const mappedCompanies = (data.companies || []).map((company: any) => ({
+            id: company.id,
+            name: company.name,
+            industry: company.industry,
+            website: company.website,
+            size: company.size,
+            contactCount: company._count?.contacts || 0,
+            dealCount: company._count?.deals || 0,
+            createdAt: company.createdAt,
+          }));
+          setCompanies(mappedCompanies);
+        } else {
+          console.error('Failed to fetch companies:', response.statusText);
+        }
       } catch (error) {
         console.error('Error fetching companies:', error);
       } finally {
